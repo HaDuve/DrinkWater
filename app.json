@@ -3,6 +3,12 @@
     "name": "DrinkWater",
     "slug": "DrinkWater",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a8033060-6979-4c40-8070-798dfd7f8c52"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "drinkwater",

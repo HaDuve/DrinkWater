@@ -3,11 +3,15 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   TextInput,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -82,6 +86,11 @@ export default function SettingsScreen() {
     refresh();
   }, [goalInput, glassInput, intervalInput, reminders, refresh]);
 
+  const dismissAndSave = useCallback(() => {
+    Keyboard.dismiss();
+    void save();
+  }, [save]);
+
   if (!loaded) {
     return (
       <ThemedView style={styles.centered}>
@@ -99,68 +108,100 @@ export default function SettingsScreen() {
     },
   ];
 
+  const avoidingBehavior = Platform.select<'padding' | 'height' | undefined>({
+    ios: 'padding',
+    android: 'height',
+    default: undefined,
+  });
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title" style={styles.screenTitle}>
-          Settings
-        </ThemedText>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoid}
+          behavior={avoidingBehavior}
+          enabled={Platform.OS !== 'web'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? BottomTabInset : 0}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.formContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            showsVerticalScrollIndicator={false}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={styles.formInner}>
+                <ThemedText type="title" style={styles.screenTitle}>
+                  Settings
+                </ThemedText>
 
-        <View style={styles.field}>
-          <ThemedText type="smallBold">Daily goal (ml)</ThemedText>
-          <TextInput
-            keyboardType="number-pad"
-            value={goalInput}
-            onChangeText={setGoalInput}
-            style={inputStyle}
-            placeholder="2000"
-            placeholderTextColor={theme.textSecondary}
-          />
-        </View>
+                <View style={styles.field}>
+                  <ThemedText type="smallBold">Daily goal (ml)</ThemedText>
+                  <TextInput
+                    keyboardType="number-pad"
+                    value={goalInput}
+                    onChangeText={setGoalInput}
+                    style={inputStyle}
+                    placeholder="2000"
+                    placeholderTextColor={theme.textSecondary}
+                  />
+                </View>
 
-        <View style={styles.field}>
-          <ThemedText type="smallBold">Glass size (ml)</ThemedText>
-          <TextInput
-            keyboardType="number-pad"
-            value={glassInput}
-            onChangeText={setGlassInput}
-            style={inputStyle}
-            placeholder="250"
-            placeholderTextColor={theme.textSecondary}
-          />
-        </View>
+                <View style={styles.field}>
+                  <ThemedText type="smallBold">Glass size (ml)</ThemedText>
+                  <TextInput
+                    keyboardType="number-pad"
+                    value={glassInput}
+                    onChangeText={setGlassInput}
+                    style={inputStyle}
+                    placeholder="250"
+                    placeholderTextColor={theme.textSecondary}
+                  />
+                </View>
 
-        <View style={styles.field}>
-          <ThemedText type="smallBold">Reminder interval (hours)</ThemedText>
-          <TextInput
-            keyboardType="number-pad"
-            value={intervalInput}
-            onChangeText={setIntervalInput}
-            style={inputStyle}
-            placeholder="2"
-            placeholderTextColor={theme.textSecondary}
-          />
-          <ThemedText type="small" themeColor="textSecondary">
-            Repeating local notification every N hours (1–12). Test on a physical device.
-          </ThemedText>
-        </View>
+                <View style={styles.field}>
+                  <ThemedText type="smallBold">Reminder interval (hours)</ThemedText>
+                  <TextInput
+                    keyboardType="number-pad"
+                    value={intervalInput}
+                    onChangeText={setIntervalInput}
+                    style={inputStyle}
+                    placeholder="2"
+                    placeholderTextColor={theme.textSecondary}
+                  />
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Repeating local notification every N hours (1–12). Test on a physical device.
+                  </ThemedText>
+                </View>
 
-        <View style={styles.row}>
-          <ThemedText type="smallBold">Reminders</ThemedText>
-          <Switch
-            value={reminders}
-            onValueChange={setReminders}
-            trackColor={{ false: theme.backgroundElement, true: '#208AEF' }}
-          />
-        </View>
+                <View style={styles.row}>
+                  <ThemedText type="smallBold">Reminders</ThemedText>
+                  <Switch
+                    value={reminders}
+                    onValueChange={setReminders}
+                    trackColor={{ false: theme.backgroundElement, true: '#208AEF' }}
+                  />
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </ScrollView>
 
-        <Pressable
-          style={({ pressed }) => [styles.saveBtn, pressed && styles.pressed]}
-          onPress={() => void save()}>
-          <ThemedText type="smallBold" style={styles.saveBtnText}>
-            Save settings
-          </ThemedText>
-        </Pressable>
+          <View
+            style={[
+              styles.footer,
+              {
+                paddingBottom: BottomTabInset + Spacing.three,
+                borderTopColor: theme.backgroundElement,
+              },
+            ]}>
+            <Pressable
+              style={({ pressed }) => [styles.saveBtn, pressed && styles.pressed]}
+              onPress={dismissAndSave}>
+              <ThemedText type="smallBold" style={styles.saveBtnText}>
+                Save settings
+              </ThemedText>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -180,10 +221,27 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     alignSelf: 'stretch',
-    paddingHorizontal: Spacing.four,
-    paddingBottom: BottomTabInset + Spacing.three,
     maxWidth: MaxContentWidth,
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  formContent: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.three,
+  },
+  formInner: {
+    flexGrow: 1,
     gap: Spacing.three,
+  },
+  footer: {
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   screenTitle: {
     fontSize: 28,
@@ -212,7 +270,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Spacing.three,
     alignItems: 'center',
-    marginTop: Spacing.two,
   },
   saveBtnText: {
     color: '#ffffff',

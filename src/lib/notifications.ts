@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import i18next from '@/i18n/i18n';
+
 const NOTIFICATION_ID_KEY = '@water_reminder_notification_id';
 
 Notifications.setNotificationHandler({
@@ -93,7 +95,7 @@ export async function getWaterReminderUiState(
 export async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('water-reminders', {
-      name: 'Water reminders',
+      name: i18next.t('notifications.channelName'),
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
@@ -129,8 +131,8 @@ export async function scheduleWaterReminders(intervalHours: number): Promise<boo
   const trigger = waterReminderTriggerFromIntervalHours(intervalHours);
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'Time to hydrate',
-      body: 'Log a glass of water in DrinkWater.',
+      title: i18next.t('notifications.title'),
+      body: i18next.t('notifications.body'),
     },
     trigger,
   });

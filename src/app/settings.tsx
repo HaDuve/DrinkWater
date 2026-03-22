@@ -1,5 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -40,6 +41,7 @@ const IOS_KAV_OFFSET_RATIO = 0.5;
 const IOS_KAV_FINE_TUNE = 0;
 
 export default function SettingsScreen() {
+  const { t } = useTranslation();
   const tabBarBottomInset = useTabBarBottomInset();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
@@ -89,17 +91,23 @@ export default function SettingsScreen() {
     const interval = Number.parseInt(intervalInput, 10);
 
     if (!Number.isFinite(goal) || goal < 100) {
-      Alert.alert("Invalid goal", "Daily goal must be at least 100 ml.");
+      Alert.alert(
+        t("settings.alertInvalidGoalTitle"),
+        t("settings.alertInvalidGoalMessage"),
+      );
       return;
     }
     if (!Number.isFinite(glass) || glass < 50) {
-      Alert.alert("Invalid glass size", "Glass size must be at least 50 ml.");
+      Alert.alert(
+        t("settings.alertInvalidGlassTitle"),
+        t("settings.alertInvalidGlassMessage"),
+      );
       return;
     }
     if (!Number.isFinite(interval) || interval < 1 || interval > 12) {
       Alert.alert(
-        "Invalid interval",
-        "Reminder interval must be between 1 and 12 hours.",
+        t("settings.alertInvalidIntervalTitle"),
+        t("settings.alertInvalidIntervalMessage"),
       );
       return;
     }
@@ -112,11 +120,11 @@ export default function SettingsScreen() {
 
     const hint =
       reminders && Platform.OS !== "web"
-        ? "Allow notifications if prompted. Test reminders on a physical device."
-        : "Your settings were updated.";
-    Alert.alert("Saved", hint);
+        ? t("settings.alertSavedNotificationsHint")
+        : t("settings.alertSavedGeneric");
+    Alert.alert(t("settings.alertSavedTitle"), hint);
     refresh();
-  }, [goalInput, glassInput, intervalInput, reminders, refresh]);
+  }, [goalInput, glassInput, intervalInput, reminders, refresh, t]);
 
   const dismissAndSave = useCallback(() => {
     Keyboard.dismiss();
@@ -178,7 +186,7 @@ export default function SettingsScreen() {
         onPress={dismissAndSave}
       >
         <ThemedText type="smallBold" style={styles.saveBtnText}>
-          Save settings
+          {t("settings.save")}
         </ThemedText>
       </Pressable>
     </View>
@@ -188,11 +196,11 @@ export default function SettingsScreen() {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.formInner}>
         <ThemedText type="title" style={styles.screenTitle}>
-          Settings
+          {t("settings.title")}
         </ThemedText>
 
         <View style={styles.field}>
-          <ThemedText type="smallBold">Daily goal (ml)</ThemedText>
+          <ThemedText type="smallBold">{t("settings.dailyGoalMl")}</ThemedText>
           <TextInput
             keyboardType="number-pad"
             value={goalInput}
@@ -204,7 +212,7 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.field}>
-          <ThemedText type="smallBold">Glass size (ml)</ThemedText>
+          <ThemedText type="smallBold">{t("settings.glassSizeMl")}</ThemedText>
           <TextInput
             keyboardType="number-pad"
             value={glassInput}
@@ -216,7 +224,9 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.field}>
-          <ThemedText type="smallBold">Reminder interval (hours)</ThemedText>
+          <ThemedText type="smallBold">
+            {t("settings.reminderIntervalHours")}
+          </ThemedText>
           <TextInput
             keyboardType="number-pad"
             value={intervalInput}
@@ -226,13 +236,12 @@ export default function SettingsScreen() {
             placeholderTextColor={theme.textSecondary}
           />
           <ThemedText type="small" themeColor="textSecondary">
-            Repeating local notification every N hours (1–12). Test on a
-            physical device.
+            {t("settings.reminderHint")}
           </ThemedText>
         </View>
 
         <View style={styles.row}>
-          <ThemedText type="smallBold">Reminders</ThemedText>
+          <ThemedText type="smallBold">{t("settings.reminders")}</ThemedText>
           <Switch
             value={reminders}
             onValueChange={setReminders}

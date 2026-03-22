@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,6 +15,7 @@ import type { WaterSettings } from '@/lib/storage';
 import { addGlassAmount, loadWaterState, removeGlassAmount } from '@/lib/storage';
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const tabBarBottomInset = useTabBarBottomInset();
   const [state, setState] = useState<WaterSettings | null>(null);
   const [reminderStatus, setReminderStatus] = useState<WaterReminderUiState | null>(null);
@@ -51,16 +53,25 @@ export default function HomeScreen() {
         style={[styles.safeArea, { paddingBottom: tabBarBottomInset + Spacing.three }]}
         edges={['top', 'left', 'right']}>
         <ThemedText type="title" style={styles.title}>
-          DrinkWater
+          {t('brand.name')}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
-          Today&apos;s progress
+          {t('home.subtitle')}
         </ThemedText>
 
         <WaterProgressRing
           progress={progress}
-          centerLabel={`${state.intakeMl} / ${state.goalMl} ml`}
-          sublabel={progress >= 1 ? 'Goal reached!' : `${Math.round((1 - progress) * 100)}% to go`}
+          centerLabel={t('home.intakeGoal', {
+            intake: state.intakeMl,
+            goal: state.goalMl,
+          })}
+          sublabel={
+            progress >= 1
+              ? t('home.goalReached')
+              : t('home.percentToGo', {
+                  percent: Math.round((1 - progress) * 100),
+                })
+          }
         />
 
         {reminderStatus ? <WaterReminderInfo status={reminderStatus} /> : null}
@@ -75,7 +86,7 @@ export default function HomeScreen() {
               })();
             }}>
             <ThemedText type="smallBold" style={styles.btnLightText}>
-              + Glass ({state.glassMl} ml)
+              {t('home.addGlass', { ml: state.glassMl })}
             </ThemedText>
           </Pressable>
 
@@ -87,7 +98,7 @@ export default function HomeScreen() {
                 refresh();
               })();
             }}>
-            <ThemedText type="smallBold">Undo glass</ThemedText>
+            <ThemedText type="smallBold">{t('home.undoGlass')}</ThemedText>
           </Pressable>
         </View>
       </SafeAreaView>

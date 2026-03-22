@@ -33,6 +33,15 @@
       "favicon": "./assets/images/applogo.png"
     },
     "plugins": [
+      [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": ["en", "de"],
+            "android": ["en", "de"]
+          }
+        }
+      ],
       "expo-router",
       [
         "expo-notifications",

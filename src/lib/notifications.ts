@@ -53,10 +53,16 @@ function timeIntervalFromNotificationTrigger(
   return { seconds, repeats };
 }
 
-/**
- * Resolves home-screen reminder status: settings, permission, OS schedule, next trigger.
- */
-export async function getWaterReminderUiState(
+function scheduledReminderMatchesInterval(
+  request: Notifications.NotificationRequest,
+  intervalHours: number,
+): boolean {
+  const fromOs = timeIntervalFromNotificationTrigger(request.trigger);
+  if (!fromOs || !fromOs.repeats) return false;
+  return fromOs.seconds === waterReminderIntervalSeconds(intervalHours);
+}
+
+async function resolveWaterReminderUiState(
   remindersEnabled: boolean,
   intervalHours: number,
 ): Promise<WaterReminderUiState> {
@@ -90,6 +96,30 @@ export async function getWaterReminderUiState(
   } catch {
     return { kind: 'inactive' };
   }
+}
+
+/**
+ * Resolves home-screen reminder status: settings, permission, OS schedule, next trigger.
+ * Retries once after a short delay when the UI would look "inactive" while reminders are on —
+ * avoids a race with {@link syncWaterReminders} (cancel-then-schedule) on cold start.
+ */
+export async function getWaterReminderUiState(
+  remindersEnabled: boolean,
+  intervalHours: number,
+): Promise<WaterReminderUiState> {
+  const first = await resolveWaterReminderUiState(remindersEnabled, intervalHours);
+  if (
+    first.kind !== 'inactive' ||
+    !remindersEnabled ||
+    Platform.OS === 'web'
+  ) {
+    return first;
+  }
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== 'granted') return first;
+
+  await new Promise((r) => setTimeout(r, 280));
+  return resolveWaterReminderUiState(remindersEnabled, intervalHours);
 }
 
 export async function ensureAndroidChannel(): Promise<void> {
@@ -142,6 +172,8 @@ export async function scheduleWaterReminders(intervalHours: number): Promise<boo
 
 /**
  * Applies reminder settings: schedules when enabled, cancels when disabled.
+ * When reminders stay on with the same interval, leaves the existing schedule in place so
+ * AsyncStorage id and OS state are not briefly cleared (which broke the home reminder line on restart).
  */
 export async function syncWaterReminders(
   enabled: boolean,
@@ -152,5 +184,16 @@ export async function syncWaterReminders(
     await cancelWaterReminders();
     return;
   }
+
+  const storedId = await AsyncStorage.getItem(NOTIFICATION_ID_KEY);
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const match = storedId
+    ? scheduled.find((n) => n.identifier === storedId)
+    : undefined;
+
+  if (match && scheduledReminderMatchesInterval(match, intervalHours)) {
+    return;
+  }
+
   await scheduleWaterReminders(intervalHours);
 }

@@ -6,11 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WaterProgressRing } from '@/components/water-progress-ring';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTabBarBottomInset } from '@/hooks/use-tab-bar-bottom-inset';
 import type { WaterSettings } from '@/lib/storage';
 import { addGlassAmount, loadWaterState, removeGlassAmount } from '@/lib/storage';
 
 export default function HomeScreen() {
+  const tabBarBottomInset = useTabBarBottomInset();
   const [state, setState] = useState<WaterSettings | null>(null);
 
   const refresh = useCallback(() => {
@@ -25,8 +27,10 @@ export default function HomeScreen() {
 
   if (!state) {
     return (
-      <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" />
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.loadingSafe} edges={['top', 'left', 'right']}>
+          <ActivityIndicator size="large" />
+        </SafeAreaView>
       </ThemedView>
     );
   }
@@ -35,7 +39,9 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView
+        style={[styles.safeArea, { paddingBottom: tabBarBottomInset + Spacing.three }]}
+        edges={['top', 'left', 'right']}>
         <ThemedText type="title" style={styles.title}>
           DrinkWater
         </ThemedText>
@@ -85,8 +91,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
   },
-  centered: {
+  loadingSafe: {
     flex: 1,
+    alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -94,7 +101,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingBottom: BottomTabInset + Spacing.three,
     maxWidth: MaxContentWidth,
     gap: Spacing.three,
   },

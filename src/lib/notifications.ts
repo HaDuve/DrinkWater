@@ -13,6 +13,83 @@ Notifications.setNotificationHandler({
   }),
 });
 
+/** Seconds between water reminders from interval hours (minimum 60s). */
+export function waterReminderIntervalSeconds(intervalHours: number): number {
+  return Math.max(60, Math.round(intervalHours * 3600));
+}
+
+/** Trigger input used when scheduling and when resolving next fire time. */
+export function waterReminderTriggerFromIntervalHours(intervalHours: number) {
+  return {
+    type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+    seconds: waterReminderIntervalSeconds(intervalHours),
+    repeats: true,
+  } as const;
+}
+
+export type WaterReminderUiState =
+  | { kind: 'web' }
+  | { kind: 'app_off' }
+  | { kind: 'no_permission' }
+  | { kind: 'inactive' }
+  | { kind: 'active'; nextTriggerMs: number };
+
+function timeIntervalFromNotificationTrigger(
+  trigger: Notifications.NotificationTrigger,
+): { seconds: number; repeats: boolean } | null {
+  if (
+    trigger === null ||
+    typeof trigger !== 'object' ||
+    !('seconds' in trigger) ||
+    !('repeats' in trigger)
+  ) {
+    return null;
+  }
+  const seconds = (trigger as { seconds: unknown }).seconds;
+  const repeats = (trigger as { repeats: unknown }).repeats;
+  if (typeof seconds !== 'number' || typeof repeats !== 'boolean') return null;
+  return { seconds, repeats };
+}
+
+/**
+ * Resolves home-screen reminder status: settings, permission, OS schedule, next trigger.
+ */
+export async function getWaterReminderUiState(
+  remindersEnabled: boolean,
+  intervalHours: number,
+): Promise<WaterReminderUiState> {
+  if (Platform.OS === 'web') return { kind: 'web' };
+  if (!remindersEnabled) return { kind: 'app_off' };
+
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return { kind: 'no_permission' };
+
+    const storedId = await AsyncStorage.getItem(NOTIFICATION_ID_KEY);
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const match = storedId
+      ? scheduled.find((n) => n.identifier === storedId)
+      : undefined;
+
+    if (!match) return { kind: 'inactive' };
+
+    const fromOs = timeIntervalFromNotificationTrigger(match.trigger);
+    const triggerForNext: Notifications.SchedulableNotificationTriggerInput = fromOs
+      ? {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: fromOs.seconds,
+          repeats: fromOs.repeats,
+        }
+      : waterReminderTriggerFromIntervalHours(intervalHours);
+
+    const next = await Notifications.getNextTriggerDateAsync(triggerForNext);
+    if (next == null) return { kind: 'inactive' };
+    return { kind: 'active', nextTriggerMs: next };
+  } catch {
+    return { kind: 'inactive' };
+  }
+}
+
 export async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('water-reminders', {
@@ -49,17 +126,13 @@ export async function scheduleWaterReminders(intervalHours: number): Promise<boo
   const granted = await requestNotificationPermissions();
   if (!granted) return false;
 
-  const seconds = Math.max(60, Math.round(intervalHours * 3600));
+  const trigger = waterReminderTriggerFromIntervalHours(intervalHours);
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Time to hydrate',
       body: 'Log a glass of water in DrinkWater.',
     },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds,
-      repeats: true,
-    },
+    trigger,
   });
   await AsyncStorage.setItem(NOTIFICATION_ID_KEY, identifier);
   return true;

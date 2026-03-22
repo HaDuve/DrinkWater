@@ -6,17 +6,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WaterProgressRing } from '@/components/water-progress-ring';
+import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTabBarBottomInset } from '@/hooks/use-tab-bar-bottom-inset';
+import { getWaterReminderUiState, type WaterReminderUiState } from '@/lib/notifications';
 import type { WaterSettings } from '@/lib/storage';
 import { addGlassAmount, loadWaterState, removeGlassAmount } from '@/lib/storage';
 
 export default function HomeScreen() {
   const tabBarBottomInset = useTabBarBottomInset();
   const [state, setState] = useState<WaterSettings | null>(null);
+  const [reminderStatus, setReminderStatus] = useState<WaterReminderUiState | null>(null);
 
   const refresh = useCallback(() => {
-    void loadWaterState().then(setState);
+    void (async () => {
+      const s = await loadWaterState();
+      const reminder = await getWaterReminderUiState(s.remindersEnabled, s.intervalHours);
+      setState(s);
+      setReminderStatus(reminder);
+    })();
   }, []);
 
   useFocusEffect(
@@ -54,6 +62,8 @@ export default function HomeScreen() {
           centerLabel={`${state.intakeMl} / ${state.goalMl} ml`}
           sublabel={progress >= 1 ? 'Goal reached!' : `${Math.round((1 - progress) * 100)}% to go`}
         />
+
+        {reminderStatus ? <WaterReminderInfo status={reminderStatus} /> : null}
 
         <View style={styles.actions}>
           <Pressable

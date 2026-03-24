@@ -1,12 +1,26 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import i18next from '@/i18n/i18n';
 
 const NOTIFICATION_ID_KEY = '@water_reminder_notification_id';
 
-Notifications.setNotificationHandler({
+type NotificationsModule = typeof import('expo-notifications');
+
+let notificationsModule: NotificationsModule | null = null;
+
+function getNotificationsModule(): NotificationsModule | null {
+  if (Platform.OS === 'web') return null;
+  if (notificationsModule) return notificationsModule;
+  // Lazy require avoids importing expo-notifications during web static export.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  notificationsModule = require('expo-notifications') as NotificationsModule;
+  return notificationsModule;
+}
+
+const notifications = getNotificationsModule();
+
+notifications?.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,
     shouldSetBadge: false,
@@ -21,12 +35,22 @@ export function waterReminderIntervalSeconds(intervalHours: number): number {
 }
 
 /** Trigger input used when scheduling and when resolving next fire time. */
-export function waterReminderTriggerFromIntervalHours(intervalHours: number) {
+export function waterReminderTriggerFromIntervalHours(
+  intervalHours: number,
+): import('expo-notifications').SchedulableNotificationTriggerInput {
+  const Notifications = getNotificationsModule();
+  if (Notifications) {
+    return {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: waterReminderIntervalSeconds(intervalHours),
+      repeats: true,
+    };
+  }
   return {
-    type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+    type: 'timeInterval' as unknown as import('expo-notifications').SchedulableTriggerInputTypes.TIME_INTERVAL,
     seconds: waterReminderIntervalSeconds(intervalHours),
     repeats: true,
-  } as const;
+  };
 }
 
 export type WaterReminderUiState =
@@ -37,7 +61,7 @@ export type WaterReminderUiState =
   | { kind: 'active'; nextTriggerMs: number };
 
 function timeIntervalFromNotificationTrigger(
-  trigger: Notifications.NotificationTrigger,
+  trigger: import('expo-notifications').NotificationTrigger,
 ): { seconds: number; repeats: boolean } | null {
   if (
     trigger === null ||
@@ -54,7 +78,7 @@ function timeIntervalFromNotificationTrigger(
 }
 
 function scheduledReminderMatchesInterval(
-  request: Notifications.NotificationRequest,
+  request: import('expo-notifications').NotificationRequest,
   intervalHours: number,
 ): boolean {
   const fromOs = timeIntervalFromNotificationTrigger(request.trigger);
@@ -70,6 +94,9 @@ async function resolveWaterReminderUiState(
   if (!remindersEnabled) return { kind: 'app_off' };
 
   try {
+    const Notifications = getNotificationsModule();
+    if (!Notifications) return { kind: 'web' };
+
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') return { kind: 'no_permission' };
 
@@ -82,7 +109,7 @@ async function resolveWaterReminderUiState(
     if (!match) return { kind: 'inactive' };
 
     const fromOs = timeIntervalFromNotificationTrigger(match.trigger);
-    const triggerForNext: Notifications.SchedulableNotificationTriggerInput = fromOs
+    const triggerForNext: import('expo-notifications').SchedulableNotificationTriggerInput = fromOs
       ? {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: fromOs.seconds,
@@ -115,6 +142,8 @@ export async function getWaterReminderUiState(
   ) {
     return first;
   }
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return { kind: 'web' };
   const { status } = await Notifications.getPermissionsAsync();
   if (status !== 'granted') return first;
 
@@ -123,6 +152,8 @@ export async function getWaterReminderUiState(
 }
 
 export async function ensureAndroidChannel(): Promise<void> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('water-reminders', {
       name: i18next.t('notifications.channelName'),
@@ -132,6 +163,8 @@ export async function ensureAndroidChannel(): Promise<void> {
 }
 
 export async function requestNotificationPermissions(): Promise<boolean> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return false;
   if (Platform.OS === 'web') return false;
   await ensureAndroidChannel();
   const { status: existing } = await Notifications.getPermissionsAsync();
@@ -141,6 +174,8 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 }
 
 export async function cancelWaterReminders(): Promise<void> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
   if (Platform.OS === 'web') return;
   const id = await AsyncStorage.getItem(NOTIFICATION_ID_KEY);
   if (id) {
@@ -153,6 +188,8 @@ export async function cancelWaterReminders(): Promise<void> {
  * Schedules one repeating local notification. Cancels any previous water reminder schedule.
  */
 export async function scheduleWaterReminders(intervalHours: number): Promise<boolean> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return false;
   if (Platform.OS === 'web') return false;
   await cancelWaterReminders();
   const granted = await requestNotificationPermissions();
@@ -179,6 +216,8 @@ export async function syncWaterReminders(
   enabled: boolean,
   intervalHours: number,
 ): Promise<void> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
   if (Platform.OS === 'web') return;
   if (!enabled) {
     await cancelWaterReminders();

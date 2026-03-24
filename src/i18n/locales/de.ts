@@ -3,6 +3,7 @@ import type { TranslationResources } from "./en";
 export const de: TranslationResources = {
   tabs: {
     home: "Start",
+    history: "Verlauf",
     settings: "Einstellungen",
     docs: "Doku",
   },
@@ -37,6 +38,13 @@ export const de: TranslationResources = {
     alertSavedNotificationsHint:
       "Erlaube Benachrichtigungen, falls danach gefragt wird.",
     alertSavedGeneric: "Deine Einstellungen wurden aktualisiert.",
+  },
+  history: {
+    title: "Verlauf",
+    subtitle: "Vergangene Tage",
+    empty: "Noch keine Trinkhistorie vorhanden.",
+    mlValue: "{{ml}} ml",
+    percentOfGoal: "{{percent}} % vom Ziel",
   },
   reminder: {
     web: "Erinnerungen sind unter iOS und Android verfügbar.",

@@ -1,6 +1,7 @@
 export const en = {
   tabs: {
     home: "Home",
+    history: "History",
     settings: "Settings",
     docs: "Docs",
   },
@@ -33,6 +34,13 @@ export const en = {
     alertSavedTitle: "Saved",
     alertSavedNotificationsHint: "Allow notifications if prompted.",
     alertSavedGeneric: "Your settings were updated.",
+  },
+  history: {
+    title: "History",
+    subtitle: "Previous days",
+    empty: "No water intake history yet.",
+    mlValue: "{{ml}} ml",
+    percentOfGoal: "{{percent}}% of goal",
   },
   reminder: {
     web: "Reminders are available on iOS and Android.",

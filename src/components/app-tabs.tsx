@@ -20,6 +20,11 @@ export default function AppTabs() {
         <Icon src={require('@/assets/images/tabIcons/home.png')} />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="history">
+        <Label>{t('tabs.history')}</Label>
+        <Icon src={require('@/assets/images/tabIcons/home.png')} />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="settings">
         <Label>{t('tabs.settings')}</Label>
         <Icon src={require('@/assets/images/tabIcons/explore.png')} />

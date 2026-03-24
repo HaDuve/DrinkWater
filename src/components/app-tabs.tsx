@@ -22,7 +22,7 @@ export default function AppTabs() {
 
       <NativeTabs.Trigger name="history">
         <Label>{t('tabs.history')}</Label>
-        <Icon src={require('@/assets/images/tabIcons/home.png')} />
+        <Icon src={require('@/assets/images/tabIcons/explore.png')} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="settings">

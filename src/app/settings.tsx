@@ -2,7 +2,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
@@ -20,20 +19,13 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+import { ScreenLoadingState } from "@/components/screen-loading-state";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
+import { useSettingsModel } from "@/features/water/hooks/use-settings-model";
 import { useTabBarBottomInset } from "@/hooks/use-tab-bar-bottom-inset";
 import { useTheme } from "@/hooks/use-theme";
-import { syncWaterReminders } from "@/lib/notifications";
-import type { WaterSettings } from "@/lib/storage";
-import {
-  loadWaterState,
-  saveGlassMl,
-  saveGoalMl,
-  saveIntervalHours,
-  saveRemindersEnabled,
-} from "@/lib/storage";
 
 /** Fraction of tab-bar core (inset minus home indicator) used as KAV offset; lower = narrower gap above keyboard. */
 const IOS_KAV_OFFSET_RATIO = 0.5;
@@ -45,11 +37,19 @@ export default function SettingsScreen() {
   const tabBarBottomInset = useTabBarBottomInset();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
-  const [loaded, setLoaded] = useState<WaterSettings | null>(null);
-  const [goalInput, setGoalInput] = useState("");
-  const [glassInput, setGlassInput] = useState("");
-  const [intervalInput, setIntervalInput] = useState("");
-  const [reminders, setReminders] = useState(true);
+  const {
+    loaded,
+    goalInput,
+    setGoalInput,
+    glassInput,
+    setGlassInput,
+    intervalInput,
+    setIntervalInput,
+    reminders,
+    setReminders,
+    refresh,
+    save,
+  } = useSettingsModel();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   useEffect(() => {
@@ -69,79 +69,46 @@ export default function SettingsScreen() {
     };
   }, []);
 
-  const refresh = useCallback(() => {
-    void loadWaterState().then((s) => {
-      setLoaded(s);
-      setGoalInput(String(s.goalMl));
-      setGlassInput(String(s.glassMl));
-      setIntervalInput(String(s.intervalHours));
-      setReminders(s.remindersEnabled);
-    });
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       refresh();
     }, [refresh]),
   );
 
-  const save = useCallback(async () => {
-    const goal = Number.parseInt(goalInput, 10);
-    const glass = Number.parseInt(glassInput, 10);
-    const interval = Number.parseInt(intervalInput, 10);
-
-    if (!Number.isFinite(goal) || goal < 100) {
-      Alert.alert(
-        t("settings.alertInvalidGoalTitle"),
-        t("settings.alertInvalidGoalMessage"),
-      );
-      return;
-    }
-    if (!Number.isFinite(glass) || glass < 50) {
-      Alert.alert(
-        t("settings.alertInvalidGlassTitle"),
-        t("settings.alertInvalidGlassMessage"),
-      );
-      return;
-    }
-    if (!Number.isFinite(interval) || interval < 1 || interval > 12) {
-      Alert.alert(
-        t("settings.alertInvalidIntervalTitle"),
-        t("settings.alertInvalidIntervalMessage"),
-      );
-      return;
-    }
-
-    await saveGoalMl(goal);
-    await saveGlassMl(glass);
-    await saveIntervalHours(interval);
-    await saveRemindersEnabled(reminders);
-    await syncWaterReminders(reminders, interval);
-
-    const hint =
-      reminders && Platform.OS !== "web"
-        ? t("settings.alertSavedNotificationsHint")
-        : t("settings.alertSavedGeneric");
-    Alert.alert(t("settings.alertSavedTitle"), hint);
-    refresh();
-  }, [goalInput, glassInput, intervalInput, reminders, refresh, t]);
-
   const dismissAndSave = useCallback(() => {
     Keyboard.dismiss();
-    void save();
-  }, [save]);
+    void save().then((result) => {
+      if (!result.ok) {
+        if (result.error === "goal") {
+          Alert.alert(
+            t("settings.alertInvalidGoalTitle"),
+            t("settings.alertInvalidGoalMessage"),
+          );
+          return;
+        }
+        if (result.error === "glass") {
+          Alert.alert(
+            t("settings.alertInvalidGlassTitle"),
+            t("settings.alertInvalidGlassMessage"),
+          );
+          return;
+        }
+        Alert.alert(
+          t("settings.alertInvalidIntervalTitle"),
+          t("settings.alertInvalidIntervalMessage"),
+        );
+        return;
+      }
+
+      const hint = result.notificationsHint
+        ? t("settings.alertSavedNotificationsHint")
+        : t("settings.alertSavedGeneric");
+      Alert.alert(t("settings.alertSavedTitle"), hint);
+    });
+  }, [save, t]);
 
   if (!loaded) {
-    return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView
-          style={styles.loadingSafe}
-          edges={["top", "left", "right"]}
-        >
-          <ActivityIndicator size="large" />
-        </SafeAreaView>
-      </ThemedView>
-    );
+    return <ScreenLoadingState />;
   }
 
   const inputStyle = [
@@ -283,12 +250,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "row",
-    justifyContent: "center",
-  },
-  loadingSafe: {
-    flex: 1,
-    alignSelf: "stretch",
-    alignItems: "center",
     justifyContent: "center",
   },
   safeArea: {

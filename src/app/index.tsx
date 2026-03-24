@@ -1,9 +1,10 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ScreenLoadingState } from '@/components/screen-loading-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WaterProgressRing } from '@/components/water-progress-ring';
@@ -36,13 +37,7 @@ export default function HomeScreen() {
   );
 
   if (!state) {
-    return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.loadingSafe} edges={['top', 'left', 'right']}>
-          <ActivityIndicator size="large" />
-        </SafeAreaView>
-      </ThemedView>
-    );
+    return <ScreenLoadingState />;
   }
 
   const progress = state.goalMl > 0 ? state.intakeMl / state.goalMl : 0;
@@ -110,12 +105,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  loadingSafe: {
-    flex: 1,
-    alignSelf: 'stretch',
-    alignItems: 'center',
     justifyContent: 'center',
   },
   safeArea: {

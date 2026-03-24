@@ -26,7 +26,7 @@ function todayISO(): string {
   return `${y}-${m}-${day}`;
 }
 
-function parseNumber(value: string | null, fallback: number): number {
+function parseIntOrFallback(value: string | null, fallback: number): number {
   if (value == null) return fallback;
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) ? n : fallback;
@@ -96,19 +96,40 @@ async function upsertHistoryForDate(date: string, intakeMl: number): Promise<voi
   await saveDailyHistoryMap(history);
 }
 
-/**
- * Loads persisted water tracker state and rolls daily intake when the calendar day changes.
- */
-export async function loadWaterState(): Promise<WaterSettings> {
-  const [
-    goalMlEntry,
-    glassMlEntry,
-    intakeMlEntry,
-    historyEntry,
-    intervalEntry,
-    lastResetEntry,
-    remindersEntry,
-  ] = await AsyncStorage.multiGet([
+function normalizeSettings(raw: {
+  goalMl: string | null;
+  glassMl: string | null;
+  intervalHours: string | null;
+  remindersEnabled: string | null;
+}): Pick<WaterSettings, 'goalMl' | 'glassMl' | 'intervalHours' | 'remindersEnabled'> {
+  return {
+    goalMl: Math.max(100, parseIntOrFallback(raw.goalMl, DEFAULTS.goalMl)),
+    glassMl: Math.max(50, parseIntOrFallback(raw.glassMl, DEFAULTS.glassMl)),
+    intervalHours: Math.max(1, Math.min(12, parseIntOrFallback(raw.intervalHours, DEFAULTS.intervalHours))),
+    remindersEnabled: raw.remindersEnabled !== 'false',
+  };
+}
+
+function ensureTodayHistoryEntry(
+  history: Record<string, number>,
+  today: string,
+  intakeMl: number,
+): { changed: boolean; next: Record<string, number> } {
+  const normalizedToday = Math.max(0, intakeMl);
+  if (history[today] === normalizedToday) return { changed: false, next: history };
+  return { changed: true, next: { ...history, [today]: normalizedToday } };
+}
+
+async function readRawWaterState(): Promise<{
+  goalMl: string | null;
+  glassMl: string | null;
+  intakeMl: string | null;
+  dailyHistory: string | null;
+  intervalHours: string | null;
+  lastResetDate: string | null;
+  remindersEnabled: string | null;
+}> {
+  const entries = await AsyncStorage.multiGet([
     KEYS.goalMl,
     KEYS.glassMl,
     KEYS.intakeMl,
@@ -117,43 +138,58 @@ export async function loadWaterState(): Promise<WaterSettings> {
     KEYS.lastResetDate,
     KEYS.remindersEnabled,
   ]);
+  return {
+    goalMl: entries[0]?.[1] ?? null,
+    glassMl: entries[1]?.[1] ?? null,
+    intakeMl: entries[2]?.[1] ?? null,
+    dailyHistory: entries[3]?.[1] ?? null,
+    intervalHours: entries[4]?.[1] ?? null,
+    lastResetDate: entries[5]?.[1] ?? null,
+    remindersEnabled: entries[6]?.[1] ?? null,
+  };
+}
 
-  const today = todayISO();
-  const storedDate = lastResetEntry[1];
-  let intakeMl = parseNumber(intakeMlEntry[1], DEFAULTS.intakeMl);
-  const parsedHistory = parseDailyHistory(historyEntry[1]);
-  const history: Record<string, number> = { ...parsedHistory };
-
+async function rolloverIfNeeded(
+  history: Record<string, number>,
+  storedDate: string | null,
+  today: string,
+  intakeMl: number,
+): Promise<{ intakeMl: number; history: Record<string, number> }> {
   if (storedDate !== today) {
-    if (storedDate) {
-      history[storedDate] = Math.max(0, intakeMl);
-    }
-    intakeMl = 0;
-    history[today] = 0;
-    const serializedHistory = JSON.stringify(pruneHistoryMap(history));
+    const nextHistory = { ...history };
+    if (storedDate) nextHistory[storedDate] = Math.max(0, intakeMl);
+    nextHistory[today] = 0;
     await AsyncStorage.multiSet([
       [KEYS.intakeMl, '0'],
-      [KEYS.dailyHistory, serializedHistory],
+      [KEYS.dailyHistory, JSON.stringify(pruneHistoryMap(nextHistory))],
       [KEYS.lastResetDate, today],
     ]);
-  } else {
-    const normalizedToday = Math.max(0, intakeMl);
-    if (history[today] !== normalizedToday) {
-      history[today] = normalizedToday;
-      await saveDailyHistoryMap(history);
-    }
+    return { intakeMl: 0, history: nextHistory };
   }
 
+  const { changed, next } = ensureTodayHistoryEntry(history, today, intakeMl);
+  if (changed) await saveDailyHistoryMap(next);
+  return { intakeMl: Math.max(0, intakeMl), history: next };
+}
+
+/**
+ * Loads persisted water tracker state and rolls daily intake when the calendar day changes.
+ */
+export async function loadWaterState(): Promise<WaterSettings> {
+  const raw = await readRawWaterState();
+  const today = todayISO();
+  const intakeMl = parseIntOrFallback(raw.intakeMl, DEFAULTS.intakeMl);
+  const history = parseDailyHistory(raw.dailyHistory);
+  const rolled = await rolloverIfNeeded(history, raw.lastResetDate, today, intakeMl);
+  const settings = normalizeSettings(raw);
+
   return {
-    goalMl: Math.max(100, parseNumber(goalMlEntry[1], DEFAULTS.goalMl)),
-    glassMl: Math.max(50, parseNumber(glassMlEntry[1], DEFAULTS.glassMl)),
-    intakeMl: Math.max(0, intakeMl),
-    intervalHours: Math.max(
-      1,
-      Math.min(12, parseNumber(intervalEntry[1], DEFAULTS.intervalHours)),
-    ),
+    goalMl: settings.goalMl,
+    glassMl: settings.glassMl,
+    intakeMl: rolled.intakeMl,
+    intervalHours: settings.intervalHours,
     lastResetDate: today,
-    remindersEnabled: remindersEntry[1] !== 'false',
+    remindersEnabled: settings.remindersEnabled,
   };
 }
 
@@ -191,13 +227,17 @@ export async function removeGlassAmount(amountMl: number): Promise<void> {
 }
 
 export async function loadDailyHistory(days: number = 7): Promise<DailyHistoryEntry[]> {
+  return loadAndSyncDailyHistory(days);
+}
+
+async function loadAndSyncDailyHistory(days: number): Promise<DailyHistoryEntry[]> {
   const keepDays = Math.max(1, Math.round(days));
   const today = todayISO();
   const state = await loadWaterState();
   const history = await loadDailyHistoryMap();
-  history[today] = state.intakeMl;
-  await saveDailyHistoryMap(history);
-  const sorted = Object.entries(history)
+  const ensured = ensureTodayHistoryEntry(history, today, state.intakeMl);
+  if (ensured.changed) await saveDailyHistoryMap(ensured.next);
+  const sorted = Object.entries(ensured.next)
     .sort((a, b) => dayToUtcEpoch(b[0]) - dayToUtcEpoch(a[0]))
     .slice(0, keepDays)
     .map(([date, intake]) => ({

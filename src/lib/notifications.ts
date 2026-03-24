@@ -18,6 +18,11 @@ function getNotificationsModule(): NotificationsModule | null {
   return notificationsModule;
 }
 
+function getNativeNotificationsOrNull(): NotificationsModule | null {
+  if (Platform.OS === 'web') return null;
+  return getNotificationsModule();
+}
+
 const notifications = getNotificationsModule();
 
 notifications?.setNotificationHandler({
@@ -94,7 +99,7 @@ async function resolveWaterReminderUiState(
   if (!remindersEnabled) return { kind: 'app_off' };
 
   try {
-    const Notifications = getNotificationsModule();
+    const Notifications = getNativeNotificationsOrNull();
     if (!Notifications) return { kind: 'web' };
 
     const { status } = await Notifications.getPermissionsAsync();
@@ -152,7 +157,7 @@ export async function getWaterReminderUiState(
 }
 
 export async function ensureAndroidChannel(): Promise<void> {
-  const Notifications = getNotificationsModule();
+  const Notifications = getNativeNotificationsOrNull();
   if (!Notifications) return;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('water-reminders', {
@@ -163,9 +168,8 @@ export async function ensureAndroidChannel(): Promise<void> {
 }
 
 export async function requestNotificationPermissions(): Promise<boolean> {
-  const Notifications = getNotificationsModule();
+  const Notifications = getNativeNotificationsOrNull();
   if (!Notifications) return false;
-  if (Platform.OS === 'web') return false;
   await ensureAndroidChannel();
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (existing === 'granted') return true;
@@ -174,9 +178,8 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 }
 
 export async function cancelWaterReminders(): Promise<void> {
-  const Notifications = getNotificationsModule();
+  const Notifications = getNativeNotificationsOrNull();
   if (!Notifications) return;
-  if (Platform.OS === 'web') return;
   const id = await AsyncStorage.getItem(NOTIFICATION_ID_KEY);
   if (id) {
     await Notifications.cancelScheduledNotificationAsync(id);
@@ -188,9 +191,8 @@ export async function cancelWaterReminders(): Promise<void> {
  * Schedules one repeating local notification. Cancels any previous water reminder schedule.
  */
 export async function scheduleWaterReminders(intervalHours: number): Promise<boolean> {
-  const Notifications = getNotificationsModule();
+  const Notifications = getNativeNotificationsOrNull();
   if (!Notifications) return false;
-  if (Platform.OS === 'web') return false;
   await cancelWaterReminders();
   const granted = await requestNotificationPermissions();
   if (!granted) return false;
@@ -216,9 +218,8 @@ export async function syncWaterReminders(
   enabled: boolean,
   intervalHours: number,
 ): Promise<void> {
-  const Notifications = getNotificationsModule();
+  const Notifications = getNativeNotificationsOrNull();
   if (!Notifications) return;
-  if (Platform.OS === 'web') return;
   if (!enabled) {
     await cancelWaterReminders();
     return;

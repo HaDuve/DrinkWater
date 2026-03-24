@@ -4,6 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { APP_TABS, type AppTabId } from './tab-config';
+
+function tabIcon(tabId: AppTabId) {
+  if (tabId === 'home') return require('@/assets/images/tabIcons/home.png');
+  return require('@/assets/images/tabIcons/explore.png');
+}
 
 export default function AppTabs() {
   const { t } = useTranslation();
@@ -15,20 +21,12 @@ export default function AppTabs() {
       backgroundColor={colors.background}
       indicatorColor={colors.backgroundElement}
       labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <Label>{t('tabs.home')}</Label>
-        <Icon src={require('@/assets/images/tabIcons/home.png')} />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="history">
-        <Label>{t('tabs.history')}</Label>
-        <Icon src={require('@/assets/images/tabIcons/explore.png')} />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="settings">
-        <Label>{t('tabs.settings')}</Label>
-        <Icon src={require('@/assets/images/tabIcons/explore.png')} />
-      </NativeTabs.Trigger>
+      {APP_TABS.map((tab) => (
+        <NativeTabs.Trigger key={tab.id} name={tab.nativeName}>
+          <Label>{t(tab.i18nKey)}</Label>
+          <Icon src={tabIcon(tab.id)} />
+        </NativeTabs.Trigger>
+      ))}
     </NativeTabs>
   );
 }

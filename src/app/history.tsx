@@ -1,162 +1,24 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { ScreenLoadingState } from '@/components/screen-loading-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WaterHistoryChart, type WaterHistoryChartEntry } from '@/components/water-history-chart';
+import { WaterHistoryChart } from '@/components/water-history-chart';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import {
+  formatDateLabel,
+  formatWeekRangeLabel,
+  generateFakeHistory,
+  type HistoryRange,
+} from '@/features/water/domain/history';
+import { useHistoryScreenModel } from '@/features/water/hooks/use-history-screen-model';
 import { useTabBarBottomInset } from '@/hooks/use-tab-bar-bottom-inset';
 import { useTheme } from '@/hooks/use-theme';
 import { loadDailyHistory, loadWaterState, type DailyHistoryEntry, type WaterSettings } from '@/lib/storage';
-
-type HistoryRange = 7 | 30 | 90;
-
-function formatDateLabel(dateIso: string): string {
-  const [year, month, day] = dateIso.split('-').map(Number);
-  const date = new Date(year || 1970, (month || 1) - 1, day || 1);
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
-}
-
-function todayISO(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function dateFromIso(dateIso: string): Date {
-  const [year, month, day] = dateIso.split('-').map(Number);
-  return new Date(year || 1970, (month || 1) - 1, day || 1);
-}
-
-function isoFromDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function getWeekStartMonday(dateIso: string): string {
-  const date = dateFromIso(dateIso);
-  const day = date.getDay();
-  const offset = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + offset);
-  return isoFromDate(date);
-}
-
-function formatWeekRangeLabel(weekStartIso: string): string {
-  const weekStart = dateFromIso(weekStartIso);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-
-  const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
-  const sameYear = weekStart.getFullYear() === weekEnd.getFullYear();
-
-  if (sameMonth && sameYear) {
-    const month = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(weekStart);
-    return `${month} ${weekStart.getDate()}-${weekEnd.getDate()}`;
-  }
-
-  const left = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(weekStart);
-  const right = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(weekEnd);
-  return `${left} - ${right}`;
-}
-
-function formatAxisTickLabel(dateIso: string, range: HistoryRange): string {
-  const date = dateFromIso(dateIso);
-  if (range === 30) {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}.${month}`;
-  }
-  if (range === 90) {
-    return new Intl.DateTimeFormat(undefined, { month: 'short' }).format(date);
-  }
-  return new Intl.DateTimeFormat(undefined, { day: 'numeric' }).format(date);
-}
-
-function aggregateChartEntries(
-  history: DailyHistoryEntry[],
-  range: HistoryRange,
-): WaterHistoryChartEntry[] {
-  const chronological = history.slice(0, range).reverse();
-  if (chronological.length === 0) return [];
-
-  if (range === 7) {
-    return chronological.map((item) => ({
-      id: item.date,
-      intakeMl: item.intakeMl,
-      label: new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(dateFromIso(item.date)),
-      showLabel: true,
-      labelAlign: 'center' as const,
-    }));
-  }
-
-  const groupSize = range === 30 ? 2 : 7;
-  const groups: DailyHistoryEntry[][] = [];
-  for (let i = 0; i < chronological.length; i += groupSize) {
-    groups.push(chronological.slice(i, i + groupSize));
-  }
-
-  return groups.map((group, index) => {
-    const startDate = group[0]?.date ?? '';
-    const endDate = group[group.length - 1]?.date ?? startDate;
-    const avgMl = Math.round(
-      group.reduce((sum, entry) => sum + entry.intakeMl, 0) / Math.max(1, group.length),
-    );
-    const middleIndex = Math.floor((groups.length - 1) / 2);
-    const shouldShowLabel = index === 0 || index === middleIndex || index === groups.length - 1;
-
-    return {
-      id: `${startDate}_${endDate}`,
-      intakeMl: avgMl,
-      label: formatAxisTickLabel(endDate, range),
-      showLabel: shouldShowLabel,
-      labelAlign:
-        index === 0
-          ? ('left' as const)
-          : index === middleIndex
-            ? ('center' as const)
-            : index === groups.length - 1
-              ? ('right' as const)
-              : ('left' as const),
-    };
-  });
-}
-
-function generateFakeHistory(days: number, goalMl: number): DailyHistoryEntry[] {
-  const now = new Date();
-  const safeGoal = Math.max(100, goalMl);
-  const generated: DailyHistoryEntry[] = [];
-
-  for (let index = 0; index < Math.max(1, Math.round(days)); index += 1) {
-    const date = new Date(now);
-    date.setDate(now.getDate() - index);
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    const dateIso = `${y}-${m}-${d}`;
-
-    const trend = 0.75 + 0.2 * Math.sin(index / 6);
-    const variance = 0.6 + Math.random() * 0.8;
-    const dropout = Math.random() < 0.08;
-    const intakeMl = dropout
-      ? 0
-      : Math.round((safeGoal * trend * variance) / 10) * 10;
-
-    generated.push({ date: dateIso, intakeMl });
-  }
-
-  return generated;
-}
 
 export default function HistoryScreen() {
   const { t } = useTranslation();
@@ -184,82 +46,11 @@ export default function HistoryScreen() {
       refresh();
     }, [refresh]),
   );
-
-  const visibleHistory = useMemo(() => {
-    if (isDebugMode) {
-      return (debugHistory ?? []).slice(0, selectedRange);
-    }
-    return history ?? [];
-  }, [debugHistory, history, isDebugMode, selectedRange]);
-
-  const todayKey = useMemo(() => todayISO(), []);
-
-  const historyByDate = useMemo(() => {
-    const map = new Map<string, DailyHistoryEntry>();
-    for (const item of visibleHistory) map.set(item.date, item);
-    return map;
-  }, [visibleHistory]);
-
-  const todayEntry = historyByDate.get(todayKey) ?? { date: todayKey, intakeMl: 0 };
-
-  const pastEntries = useMemo(
-    () => visibleHistory.filter((item) => item.date !== todayKey),
-    [todayKey, visibleHistory],
-  );
-
-  const weeklyPastGroups = useMemo(() => {
-    const goalMl = state?.goalMl ?? 0;
-    const groups: {
-      weekStart: string;
-      entries: DailyHistoryEntry[];
-      weeklyPercent: number;
-    }[] = [];
-
-    for (const item of pastEntries) {
-      const weekStart = getWeekStartMonday(item.date);
-      const lastGroup = groups[groups.length - 1];
-      if (!lastGroup || lastGroup.weekStart !== weekStart) {
-        groups.push({ weekStart, entries: [item], weeklyPercent: 0 });
-      } else {
-        lastGroup.entries.push(item);
-      }
-    }
-
-    return groups.map((group) => {
-      const totalMl = group.entries.reduce((sum, entry) => sum + entry.intakeMl, 0);
-      const totalGoalMl = goalMl > 0 ? goalMl * group.entries.length : 0;
-      const weeklyPercent = totalGoalMl > 0 ? Math.round((totalMl / totalGoalMl) * 100) : 0;
-      return { ...group, weeklyPercent };
-    });
-  }, [pastEntries, state?.goalMl]);
-
-  const chartEntries = useMemo(() => {
-    return aggregateChartEntries(visibleHistory, selectedRange);
-  }, [selectedRange, visibleHistory]);
-
-  const periodSummary = useMemo(() => {
-    const entries = visibleHistory;
-    const totalDays = entries.length;
-    const hitDays = entries.filter((item) => item.intakeMl >= (state?.goalMl ?? 0) && (state?.goalMl ?? 0) > 0).length;
-    const totalMl = entries.reduce((sum, item) => sum + item.intakeMl, 0);
-    const averageMl = totalDays > 0 ? Math.round(totalMl / totalDays) : 0;
-    const hitRate = totalDays > 0 ? Math.round((hitDays / totalDays) * 100) : 0;
-    return { totalDays, hitDays, totalMl, averageMl, hitRate };
-  }, [state?.goalMl, visibleHistory]);
-
-  const meaningfulDays = useMemo(
-    () => visibleHistory.filter((item) => item.intakeMl > 0).length,
-    [visibleHistory],
-  );
+  const { todayEntry, weeklyPastGroups, chartEntries, periodSummary, meaningfulDays } =
+    useHistoryScreenModel(selectedRange, state, history, isDebugMode, debugHistory);
 
   if (!state || !history) {
-    return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.loadingSafe} edges={['top', 'left', 'right']}>
-          <ActivityIndicator size="large" />
-        </SafeAreaView>
-      </ThemedView>
-    );
+    return <ScreenLoadingState />;
   }
 
   return (
@@ -444,12 +235,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  loadingSafe: {
-    flex: 1,
-    alignSelf: 'stretch',
-    alignItems: 'center',
     justifyContent: 'center',
   },
   safeArea: {

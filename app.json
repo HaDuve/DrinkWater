@@ -10,7 +10,7 @@
       "url": "https://u.expo.dev/a8033060-6979-4c40-8070-798dfd7f8c52"
     },
     "orientation": "portrait",
-    "icon": "./assets/images/applogo.png",
+    "icon": "./assets/images/AppLogoLight.png",
     "scheme": "drinkwater",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -22,15 +22,15 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/applogo.png",
-        "monochromeImage": "./assets/images/applogo.png"
+        "foregroundImage": "./assets/images/AppLogoLight.png",
+        "monochromeImage": "./assets/images/AppLogoDark.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "de.drinkwaterreminder.app"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/applogo.png"
+      "favicon": "./assets/images/AppLogoLight.png"
     },
     "plugins": [
       [
@@ -46,7 +46,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/applogo.png",
+          "icon": "./assets/images/AppLogoLight.png",
           "color": "#208AEF"
         }
       ],

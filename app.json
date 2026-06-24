@@ -2,7 +2,7 @@
   "expo": {
     "name": "DrinkWater",
     "slug": "DrinkWater",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -37,8 +37,14 @@
         "expo-localization",
         {
           "supportedLocales": {
-            "ios": ["en", "de"],
-            "android": ["en", "de"]
+            "ios": [
+              "en",
+              "de"
+            ],
+            "android": [
+              "en",
+              "de"
+            ]
           }
         }
       ],

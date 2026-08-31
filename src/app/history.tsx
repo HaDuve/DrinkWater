@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,8 @@ import { loadDailyHistory, loadWaterState, type DailyHistoryEntry, type WaterSet
 
 export default function HistoryScreen() {
   const { t } = useTranslation();
+  const { demo } = useLocalSearchParams<{ demo?: string }>();
+  const isScreenshotDemo = demo === '1';
   const theme = useTheme();
   const tabBarBottomInset = useTabBarBottomInset();
   const [selectedRange, setSelectedRange] = useState<HistoryRange>(7);
@@ -29,6 +32,12 @@ export default function HistoryScreen() {
   const [history, setHistory] = useState<DailyHistoryEntry[] | null>(null);
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [debugHistory, setDebugHistory] = useState<DailyHistoryEntry[] | null>(null);
+
+  useEffect(() => {
+    if (!isScreenshotDemo || !state) return;
+    setDebugHistory(generateFakeHistory(90, state.goalMl));
+    setIsDebugMode(true);
+  }, [isScreenshotDemo, state]);
 
   const refresh = useCallback(() => {
     void (async () => {
@@ -93,24 +102,26 @@ export default function HistoryScreen() {
               );
             })}
           </View>
-          <Pressable
-            onPress={() => {
-              if (!state) return;
-              if (isDebugMode) {
-                setIsDebugMode(false);
-                return;
-              }
-              setDebugHistory(generateFakeHistory(90, state.goalMl));
-              setIsDebugMode(true);
-            }}
-            style={[
-              styles.debugButton,
-              { backgroundColor: isDebugMode ? '#24A148' : theme.backgroundSelected },
-            ]}>
-            <ThemedText type="smallBold" themeColor={isDebugMode ? 'background' : 'textSecondary'}>
-              {isDebugMode ? t('history.debugModeOn') : t('history.debugModeOff')}
-            </ThemedText>
-          </Pressable>
+          {!isScreenshotDemo ? (
+            <Pressable
+              onPress={() => {
+                if (!state) return;
+                if (isDebugMode) {
+                  setIsDebugMode(false);
+                  return;
+                }
+                setDebugHistory(generateFakeHistory(90, state.goalMl));
+                setIsDebugMode(true);
+              }}
+              style={[
+                styles.debugButton,
+                { backgroundColor: isDebugMode ? '#24A148' : theme.backgroundSelected },
+              ]}>
+              <ThemedText type="smallBold" themeColor={isDebugMode ? 'background' : 'textSecondary'}>
+                {isDebugMode ? t('history.debugModeOn') : t('history.debugModeOff')}
+              </ThemedText>
+            </Pressable>
+          ) : null}
 
           <ThemedText type="small" themeColor="textSecondary">
             {selectedRange === 7

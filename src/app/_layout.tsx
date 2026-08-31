@@ -5,8 +5,9 @@ import React, { useEffect } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { LocaleSync } from '@/i18n/locale-sync';
 import AppTabs from '@/components/app-tabs';
+import { ScreenshotBootstrap } from '@/components/screenshot-bootstrap';
+import { LocaleSync } from '@/i18n/locale-sync';
 import { syncWaterReminders } from '@/lib/notifications';
 import { loadWaterState } from '@/lib/storage';
 
@@ -24,6 +25,7 @@ export default function TabLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <LocaleSync>
+        <ScreenshotBootstrap />
         <AnimatedSplashOverlay />
         <AppTabs />
       </LocaleSync>

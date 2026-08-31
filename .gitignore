@@ -41,3 +41,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+# App Store screenshot automation output
+/store-screenshots

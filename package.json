@@ -13,7 +13,9 @@
     "lint": "expo lint",
     "version:bump": "node ./scripts/version-bump.js",
     "update:preview": "eas update --channel preview",
-    "update:production": "eas update --channel production"
+    "update:production": "eas update --channel production",
+    "screenshots": "node scripts/capture-app-store-screenshots.mjs",
+    "screenshots:build": "node scripts/capture-app-store-screenshots.mjs --build"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

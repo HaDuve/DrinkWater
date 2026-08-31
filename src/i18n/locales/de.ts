@@ -38,6 +38,7 @@ export const de: TranslationResources = {
     alertSavedNotificationsHint:
       "Erlaube Benachrichtigungen, falls danach gefragt wird.",
     alertSavedGeneric: "Deine Einstellungen wurden aktualisiert.",
+    privacyPolicy: "Datenschutzerklärung",
   },
   history: {
     title: "Verlauf",

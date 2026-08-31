@@ -34,6 +34,7 @@ export const en = {
     alertSavedTitle: "Saved",
     alertSavedNotificationsHint: "Allow notifications if prompted.",
     alertSavedGeneric: "Your settings were updated.",
+    privacyPolicy: "Privacy policy",
   },
   history: {
     title: "History",

@@ -20,8 +20,10 @@ import {
 } from "react-native-safe-area-context";
 
 import { ScreenLoadingState } from "@/components/screen-loading-state";
+import { ExternalLink } from "@/components/external-link";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { PRIVACY_POLICY_URL } from "@/constants/urls";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
 import { useSettingsModel } from "@/features/water/hooks/use-settings-model";
 import { useTabBarBottomInset } from "@/hooks/use-tab-bar-bottom-inset";
@@ -215,6 +217,12 @@ export default function SettingsScreen() {
             trackColor={{ false: theme.backgroundElement, true: "#208AEF" }}
           />
         </View>
+
+        <View style={styles.legalSection}>
+          <ExternalLink href={PRIVACY_POLICY_URL}>
+            <ThemedText type="linkPrimary">{t("settings.privacyPolicy")}</ThemedText>
+          </ExternalLink>
+        </View>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -298,6 +306,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: Spacing.two,
+  },
+  legalSection: {
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.one,
   },
   saveBtn: {
     backgroundColor: "#208AEF",

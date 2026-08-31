@@ -1,0 +1,91 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "version": "1.0.3",
+    "copyright": "2026 DrinkH20",
+    "release": {
+      "automaticRelease": true
+    },
+    "info": {
+      "en-US": {
+        "title": "DrinkH20",
+        "subtitle": "Simple daily water tracker",
+        "description": "DrinkWater helps you build a simple daily hydration habit—without accounts, subscriptions, or complicated setup.\n\nSee today's progress at a glance on the Home screen. A clear progress ring shows how close you are to your goal. Log a glass with one tap, and undo the last entry if you made a mistake.\n\nCUSTOMIZE YOUR ROUTINE\n• Set your daily goal in milliliters\n• Choose your glass size for quick logging\n• Turn on repeating local reminders (every 1–12 hours)\n• Use light or dark mode (follows your system setting)\n\nSTAY ON TRACK WITH HISTORY\n• Review previous days and today's intake\n• Switch between 7, 30, and 90-day views\n• See goal hit rate, daily average, and total intake\n• Explore trends with daily, 2-day average, and weekly average charts\n\nPRIVATE BY DESIGN\nDrinkWater stores your intake and settings on your device only. No sign-up, no ads, no tracking, and no cloud sync required. Notifications are optional and run locally on your iPhone.\n\nAVAILABLE IN ENGLISH AND GERMAN\nThe app adapts to your device language.\n\nWELLNESS NOTE\nDrinkWater is for general wellness and personal tracking only. It does not provide medical advice. Talk to a healthcare professional if you have questions about your hydration needs.\n\nStart small. Log your first glass today.",
+        "keywords": [
+          "water",
+          "hydration",
+          "tracker",
+          "reminder",
+          "drink",
+          "health",
+          "goal",
+          "ml"
+        ],
+        "promoText": "Track your daily water goal in seconds. Tap to log a glass, get gentle reminders, and review your progress. No account, no ads, no tracking.",
+        "supportUrl": "https://hannesduve.com/",
+        "privacyPolicyUrl": "https://foodfornomads.com/datenschutzerklaerung/",
+        "screenshots": {
+          "APP_IPHONE_65": [
+            "store/apple/screenshot/en-US/APP_IPHONE_65/01-home.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/02-history.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/03-settings.png"
+          ]
+        }
+      },
+      "de-DE": {
+        "title": "TrinkH20",
+        "subtitle": "Einfacher Wasser-Tracker",
+        "description": "DrinkWater hilft dir, eine einfache Trinkgewohnheit im Alltag aufzubauen – ohne Konto, ohne Abo und ohne komplizierte Einrichtung.\n\nAuf dem Startbildschirm siehst du deinen Tagesfortschritt auf einen Blick. Ein klarer Fortschrittsring zeigt, wie nah du deinem Ziel bist. Mit einem Tipp erfasst du ein Glas Wasser – und kannst den letzten Eintrag bei Bedarf rückgängig machen.\n\nPASSE DEINE ROUTINE AN\n• Lege dein Tagesziel in Millilitern fest\n• Wähle deine Glasmenge für schnelles Erfassen\n• Aktiviere wiederholende lokale Erinnerungen (alle 1–12 Stunden)\n• Nutze Hell- oder Dunkelmodus (folgt deiner Systemeinstellung)\n\nBLEIB MIT DEM VERLAUF AM BALL\n• Sieh vergangene Tage und die heutige Aufnahme\n• Wechsle zwischen 7-, 30- und 90-Tage-Ansichten\n• Erhalte Trefferquote, Tagesdurchschnitt und Gesamtaufnahme\n• Erkenne Trends mit Tages-, 2-Tage- und Wochendurchschnitts-Ansichten\n\nPRIVAT BY DESIGN\nDrinkWater speichert deine Aufnahme und Einstellungen nur auf deinem Gerät. Kein Login, keine Werbung, kein Tracking und keine Cloud-Synchronisation. Benachrichtigungen sind optional und laufen lokal auf deinem iPhone.\n\nVERFÜGBAR AUF DEUTSCH UND ENGLISCH\nDie App passt sich der Sprache deines Geräts an.\n\nHINWEIS ZUM WOHLBEFINDEN\nDrinkWater dient der allgemeinen Wellness- und Selbstverfolgung. Es ersetzt keine medizinische Beratung. Bei Fragen zu deinem Flüssigkeitsbedarf wende dich an medizinisches Fachpersonal.\n\nFang klein an. Trage heute dein erstes Glas ein.",
+        "keywords": [
+          "wasser",
+          "trinken",
+          "hydration",
+          "erinnerung",
+          "tracker",
+          "tagesziel",
+          "gesundheit"
+        ],
+        "promoText": "Dein Wasser-Tracker für jeden Tag. Tagesziel setzen, Gläser erfassen, lokale Erinnerungen nutzen und Trends über 7–90 Tage verfolgen. Privat – ohne Konto.",
+        "supportUrl": "https://foodfornomads.com/",
+        "privacyPolicyUrl": "https://foodfornomads.com/datenschutzerklaerung/",
+        "screenshots": {
+          "APP_IPHONE_65": [
+            "store/apple/screenshot/de-DE/APP_IPHONE_65/01-home.png",
+            "store/apple/screenshot/de-DE/APP_IPHONE_65/02-history.png",
+            "store/apple/screenshot/de-DE/APP_IPHONE_65/03-settings.png"
+          ]
+        }
+      }
+    },
+    "categories": ["HEALTH_AND_FITNESS"],
+    "advisory": {
+      "ageRatingOverride": "NONE",
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gambling": false,
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "kidsAgeBand": null,
+      "koreaAgeRatingOverride": "NONE",
+      "lootBox": false,
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "unrestrictedWebAccess": false,
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "advertising": false,
+      "ageAssurance": false,
+      "ageRatingOverrideV2": "NONE",
+      "developerAgeRatingInfoUrl": null,
+      "gunsOrOtherWeapons": "NONE",
+      "healthOrWellnessTopics": false,
+      "messagingAndChat": false,
+      "parentalControls": false,
+      "userGeneratedContent": false
+    }
+  }
+}

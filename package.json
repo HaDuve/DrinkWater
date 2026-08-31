@@ -14,8 +14,10 @@
     "version:bump": "node ./scripts/version-bump.js",
     "update:preview": "eas update --channel preview",
     "update:production": "eas update --channel production",
-    "screenshots": "node scripts/capture-app-store-screenshots.mjs",
-    "screenshots:build": "node scripts/capture-app-store-screenshots.mjs --build"
+    "screenshots": "node scripts/capture-app-store-screenshots.mjs --display 6.5",
+    "screenshots:6.9": "node scripts/capture-app-store-screenshots.mjs --display 6.9",
+    "screenshots:build": "node scripts/capture-app-store-screenshots.mjs --display 6.5 --build",
+    "screenshots:6.9:build": "node scripts/capture-app-store-screenshots.mjs --display 6.9 --build"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

@@ -20,21 +20,12 @@ import {
 } from "react-native-safe-area-context";
 
 import { ScreenLoadingState } from "@/components/screen-loading-state";
-import { PrototypeSwitcher } from "@/components/prototype-switcher";
 import { ExternalLink } from "@/components/external-link";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PRIVACY_POLICY_URL } from "@/constants/urls";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
 import { ReminderWindowTimeInput } from "@/features/water/components/reminder-window-time-input";
-import {
-  PrototypeStatePanel,
-  TIME_PICKER_PROTOTYPE_VARIANTS,
-  VariantA,
-  VariantB,
-  VariantC,
-  type TimePickerPrototypeVariant,
-} from "@/features/water/components/prototype/time-picker-variants";
 import { resolveSettingsSaveAlert } from "@/features/water/hooks/settings-save-alert";
 import { useSettingsModel } from "@/features/water/hooks/use-settings-model";
 import { useTabBarBottomInset } from "@/hooks/use-tab-bar-bottom-inset";
@@ -47,10 +38,6 @@ const IOS_KAV_FINE_TUNE = 0;
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
-  const [timePickerPrototypeActive, setTimePickerPrototypeActive] = useState(false);
-  const [timePickerVariant, setTimePickerVariant] =
-    useState<TimePickerPrototypeVariant>("A");
-  const isTimePickerPrototype = __DEV__ && timePickerPrototypeActive;
   const tabBarBottomInset = useTabBarBottomInset();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
@@ -169,37 +156,6 @@ export default function SettingsScreen() {
           {t("settings.title")}
         </ThemedText>
 
-        {__DEV__ ? (
-          <View style={styles.prototypeDevSection}>
-            {isTimePickerPrototype ? (
-              <Pressable
-                onPress={() => setTimePickerPrototypeActive(false)}
-                style={({ pressed }) => [
-                  styles.prototypeDevButton,
-                  styles.prototypeDevButtonExit,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <ThemedText type="smallBold" style={styles.prototypeDevButtonText}>
-                  Exit time picker prototype
-                </ThemedText>
-              </Pressable>
-            ) : (
-              <Pressable
-                onPress={() => setTimePickerPrototypeActive(true)}
-                style={({ pressed }) => [
-                  styles.prototypeDevButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <ThemedText type="smallBold" style={styles.prototypeDevButtonText}>
-                  PROTOTYPE: Compare native time pickers
-                </ThemedText>
-              </Pressable>
-            )}
-          </View>
-        ) : null}
-
         <View style={styles.field}>
           <ThemedText type="smallBold">{t("settings.dailyGoalMl")}</ThemedText>
           <TextInput
@@ -226,55 +182,15 @@ export default function SettingsScreen() {
 
         {reminderWindow ? (
           <>
-            {isTimePickerPrototype ? (
-              <>
-                <ThemedText type="small" themeColor="textSecondary">
-                  PROTOTYPE — native time picker variants on Settings
-                </ThemedText>
-                {timePickerVariant === "A" ? (
-                  <VariantA
-                    label={t("settings.notifyTime")}
-                    start={reminderWindow.start}
-                    end={reminderWindow.end}
-                    onStartChange={setWindowStart}
-                    onEndChange={setWindowEnd}
-                  />
-                ) : null}
-                {timePickerVariant === "B" ? (
-                  <VariantB
-                    label={t("settings.notifyTime")}
-                    start={reminderWindow.start}
-                    end={reminderWindow.end}
-                    onStartChange={setWindowStart}
-                    onEndChange={setWindowEnd}
-                  />
-                ) : null}
-                {timePickerVariant === "C" ? (
-                  <VariantC
-                    label={t("settings.notifyTime")}
-                    start={reminderWindow.start}
-                    end={reminderWindow.end}
-                    onStartChange={setWindowStart}
-                    onEndChange={setWindowEnd}
-                  />
-                ) : null}
-                <PrototypeStatePanel
-                  variant={timePickerVariant}
-                  start={reminderWindow.start}
-                  end={reminderWindow.end}
-                />
-              </>
-            ) : (
-              <ReminderWindowTimeInput
-                label={t("settings.notifyTime")}
-                start={reminderWindow.start}
-                end={reminderWindow.end}
-                onStartChange={setWindowStart}
-                onEndChange={setWindowEnd}
-                startAccessibilityLabel={t("settings.reminderWindowStart")}
-                endAccessibilityLabel={t("settings.reminderWindowEnd")}
-              />
-            )}
+            <ReminderWindowTimeInput
+              label={t("settings.notifyTime")}
+              start={reminderWindow.start}
+              end={reminderWindow.end}
+              onStartChange={setWindowStart}
+              onEndChange={setWindowEnd}
+              startAccessibilityLabel={t("settings.reminderWindowStart")}
+              endAccessibilityLabel={t("settings.reminderWindowEnd")}
+            />
 
             {preview ? (
               <ThemedText type="small" themeColor="textSecondary">
@@ -331,15 +247,6 @@ export default function SettingsScreen() {
           {footer}
         </KeyboardAvoidingView>
       </SafeAreaView>
-      {isTimePickerPrototype ? (
-        <PrototypeSwitcher
-          variants={[...TIME_PICKER_PROTOTYPE_VARIANTS]}
-          currentKey={timePickerVariant}
-          onVariantChange={(key) =>
-            setTimePickerVariant(key as TimePickerPrototypeVariant)
-          }
-        />
-      ) : null}
     </ThemedView>
   );
 }
@@ -400,23 +307,6 @@ const styles = StyleSheet.create({
   legalSection: {
     paddingTop: Spacing.two,
     paddingBottom: Spacing.one,
-  },
-  prototypeDevSection: {
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.two,
-  },
-  prototypeDevButton: {
-    backgroundColor: "#92400E",
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.two,
-    alignItems: "center",
-  },
-  prototypeDevButtonExit: {
-    backgroundColor: "#374151",
-  },
-  prototypeDevButtonText: {
-    color: "#FDE68A",
   },
   saveBtn: {
     backgroundColor: "#208AEF",

@@ -12,7 +12,6 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
-    "prototype:time-picker": "expo start",
     "version:bump": "node ./scripts/version-bump.js",
     "update:preview": "eas update --channel preview",
     "update:production": "eas update --channel production",

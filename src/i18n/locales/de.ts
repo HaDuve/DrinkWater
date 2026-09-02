@@ -90,6 +90,8 @@ export const de: TranslationResources = {
     appOff: "Erinnerungen aus.",
     noPermission: "Benachrichtigungen deaktiviert.",
     inactive: "Keine Erinnerung geplant.",
+    nextAtToday: "Nächste Erinnerung um {{clockTime}} in {{time}}.",
+    doneForToday: "Heutige Erinnerungen erledigt. Nächste um {{clockTime}} in {{time}}.",
     nextIn: "Nächste Erinnerung in {{time}}.",
     linkSettings: "Einstellungen",
     linkTurnOn: "In Einstellungen aktivieren",

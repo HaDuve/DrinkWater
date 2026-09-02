@@ -86,6 +86,8 @@ export const en = {
     appOff: "Reminders off.",
     noPermission: "Notifications disabled.",
     inactive: "Reminder not scheduled.",
+    nextAtToday: "Next reminder at {{clockTime}} in {{time}}.",
+    doneForToday: "Today's reminders done. Next at {{clockTime}} in {{time}}.",
     nextIn: "Next reminder in {{time}}.",
     linkSettings: "Settings",
     linkTurnOn: "Turn on in Settings",

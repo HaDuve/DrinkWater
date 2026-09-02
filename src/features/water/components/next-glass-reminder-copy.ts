@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 
-import { formatTimeOfDay, type TimeOfDay } from './glass-schedule';
+import { formatTimeOfDay, type TimeOfDay } from '@/features/water/domain/glass-schedule';
 
 export function formatRelativeReminderTime(msFromNow: number, t: TFunction): string {
   if (!Number.isFinite(msFromNow) || msFromNow <= 0) return t('reminder.timeSoon');

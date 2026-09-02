@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import { buildNextGlassReminderBody } from '@/features/water/domain/next-glass-reminder-copy';
+import { buildNextGlassReminderBody } from '@/features/water/components/next-glass-reminder-copy';
 import { useTheme } from '@/hooks/use-theme';
 import type { WaterReminderUiState } from '@/lib/notifications';
 
@@ -27,7 +27,7 @@ export function WaterReminderInfo({ status }: Props) {
     return () => clearInterval(id);
   }, [status.kind]);
 
-  const nextIn =
+  const reminderBody =
     status.kind === 'active'
       ? buildNextGlassReminderBody(
           status.nextSlot,
@@ -59,7 +59,7 @@ export function WaterReminderInfo({ status }: Props) {
       showSettingsLink = true;
       break;
     case 'active':
-      body = nextIn ?? t('reminder.inactive');
+      body = reminderBody ?? t('reminder.inactive');
       break;
   }
 

@@ -22,7 +22,7 @@ export function pickNextGlassSlot(slots: TimeOfDay[], now: Date): NextGlassSlot 
 
   for (const slot of sorted) {
     const triggerMs = slotTriggerMs(slot, now);
-    if (triggerMs >= nowMs) {
+    if (triggerMs > nowMs) {
       return { kind: 'today', slot, triggerMs };
     }
   }

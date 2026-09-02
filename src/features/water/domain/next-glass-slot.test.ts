@@ -49,4 +49,15 @@ describe('pickNextGlassSlot', () => {
       triggerMs: tomorrowFirst,
     });
   });
+
+  it('skips a slot that is firing now and picks the next one today', () => {
+    const now = new Date(2026, 8, 2, 8, 30, 0);
+    const nextTrigger = new Date(2026, 8, 2, 9, 43, 0).getTime();
+
+    expect(pickNextGlassSlot(slotsFromDefaultSchedule(), now)).toEqual({
+      kind: 'today',
+      slot: { hour: 9, minute: 43 },
+      triggerMs: nextTrigger,
+    });
+  });
 });

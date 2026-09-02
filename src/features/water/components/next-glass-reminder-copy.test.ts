@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 
-import { formatTimeOfDay } from './glass-schedule';
+import { formatTimeOfDay } from '@/features/water/domain/glass-schedule';
+
 import {
   buildNextGlassReminderBody,
   formatRelativeReminderTime,

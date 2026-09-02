@@ -154,18 +154,15 @@ async function resolveWaterReminderUiState(
         return Notifications.getNextTriggerDateAsync(waterReminderTriggerFromSlot(slot));
       }),
     );
-    const nextTriggerMs = nextTriggerDates
-      .filter((value): value is number => value != null)
-      .sort((a, b) => a - b)[0];
-
-    if (nextTriggerMs == null) return { kind: 'inactive' };
+    const hasScheduledTrigger = nextTriggerDates.some((value) => value != null);
+    if (!hasScheduledTrigger) return { kind: 'inactive' };
 
     const nextSlot = pickNextGlassSlot(scheduleResult.schedule.slots, new Date());
     if (!nextSlot) return { kind: 'inactive' };
 
     return {
       kind: 'active',
-      nextTriggerMs,
+      nextTriggerMs: nextSlot.triggerMs,
       nextSlot: nextSlot.slot,
       slotDay: nextSlot.kind,
     };

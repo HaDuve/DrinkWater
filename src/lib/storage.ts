@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   buildGlassSchedule,
+  formatTimeOfDay,
   type GlassScheduleError,
   type ReminderWindow,
   type TimeOfDay,
@@ -121,12 +122,6 @@ async function upsertHistoryForDate(date: string, intakeMl: number): Promise<voi
   await saveDailyHistoryMap(history);
 }
 
-function formatTimeOfDayForStorage(time: TimeOfDay): string {
-  const hour = String(time.hour).padStart(2, '0');
-  const minute = String(time.minute).padStart(2, '0');
-  return `${hour}:${minute}`;
-}
-
 function parseTimeOfDayFromStorage(value: string | null): TimeOfDay | null {
   if (!value) return null;
   const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
@@ -140,21 +135,41 @@ function parseTimeOfDayFromStorage(value: string | null): TimeOfDay | null {
   return { hour, minute };
 }
 
-function parseReminderWindow(raw: {
+function readStoredReminderWindow(raw: {
   reminderWindowStart: string | null;
   reminderWindowEnd: string | null;
-}): ReminderWindow {
+}): ReminderWindow | null {
   const start = parseTimeOfDayFromStorage(raw.reminderWindowStart);
   const end = parseTimeOfDayFromStorage(raw.reminderWindowEnd);
-  if (!start || !end) return DEFAULT_REMINDER_WINDOW;
+  if (!start || !end) return null;
   return { start, end };
 }
 
-function hasStoredReminderWindow(raw: {
+function hasAnyWindowStorage(raw: {
   reminderWindowStart: string | null;
   reminderWindowEnd: string | null;
+  legacyIntervalHours: string | null;
 }): boolean {
-  return raw.reminderWindowStart != null && raw.reminderWindowEnd != null;
+  return (
+    raw.reminderWindowStart != null ||
+    raw.reminderWindowEnd != null ||
+    raw.legacyIntervalHours != null
+  );
+}
+
+async function persistReminderWindow(window: ReminderWindow): Promise<void> {
+  await AsyncStorage.multiSet([
+    [KEYS.reminderWindowStart, formatTimeOfDay(window.start)],
+    [KEYS.reminderWindowEnd, formatTimeOfDay(window.end)],
+  ]);
+}
+
+async function removeLegacyIntervalHoursIfPresent(raw: {
+  legacyIntervalHours: string | null;
+}): Promise<void> {
+  if (raw.legacyIntervalHours != null) {
+    await AsyncStorage.removeItem(LEGACY_KEYS.intervalHours);
+  }
 }
 
 async function migrateLegacyIntervalHoursIfNeeded(raw: {
@@ -162,19 +177,15 @@ async function migrateLegacyIntervalHoursIfNeeded(raw: {
   reminderWindowEnd: string | null;
   legacyIntervalHours: string | null;
 }): Promise<ReminderWindow> {
-  if (hasStoredReminderWindow(raw)) {
-    if (raw.legacyIntervalHours != null) {
-      await AsyncStorage.removeItem(LEGACY_KEYS.intervalHours);
-    }
-    return parseReminderWindow(raw);
+  const storedWindow = readStoredReminderWindow(raw);
+  if (storedWindow) {
+    await removeLegacyIntervalHoursIfPresent(raw);
+    return storedWindow;
   }
 
-  if (raw.legacyIntervalHours != null) {
-    await AsyncStorage.multiSet([
-      [KEYS.reminderWindowStart, formatTimeOfDayForStorage(DEFAULT_REMINDER_WINDOW.start)],
-      [KEYS.reminderWindowEnd, formatTimeOfDayForStorage(DEFAULT_REMINDER_WINDOW.end)],
-    ]);
-    await AsyncStorage.removeItem(LEGACY_KEYS.intervalHours);
+  if (hasAnyWindowStorage(raw)) {
+    await persistReminderWindow(DEFAULT_REMINDER_WINDOW);
+    await removeLegacyIntervalHoursIfPresent(raw);
     return DEFAULT_REMINDER_WINDOW;
   }
 
@@ -304,10 +315,7 @@ export async function saveReminderWindow(
     return validation;
   }
 
-  await AsyncStorage.multiSet([
-    [KEYS.reminderWindowStart, formatTimeOfDayForStorage(window.start)],
-    [KEYS.reminderWindowEnd, formatTimeOfDayForStorage(window.end)],
-  ]);
+  await persistReminderWindow(window);
   return { ok: true };
 }
 

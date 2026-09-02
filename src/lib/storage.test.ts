@@ -62,7 +62,7 @@ describe('legacy intervalHours migration', () => {
 describe('saveReminderWindow validation', () => {
   const context = { goalMl: 2000, glassMl: 250 };
 
-  it('rejects invalid windows before persisting', async () => {
+  it('rejects overnight windows before persisting', async () => {
     const result = await saveReminderWindow(
       {
         start: { hour: 17, minute: 0 },
@@ -72,6 +72,20 @@ describe('saveReminderWindow validation', () => {
     );
 
     expect(result).toEqual({ ok: false, error: 'overnight_window' });
+    expect(await AsyncStorage.getItem('@water_reminder_window_start')).toBeNull();
+    expect(await AsyncStorage.getItem('@water_reminder_window_end')).toBeNull();
+  });
+
+  it('rejects windows where slots would be too close before persisting', async () => {
+    const result = await saveReminderWindow(
+      {
+        start: { hour: 8, minute: 0 },
+        end: { hour: 8, minute: 30 },
+      },
+      { goalMl: 5000, glassMl: 50 },
+    );
+
+    expect(result).toEqual({ ok: false, error: 'slots_too_close' });
     expect(await AsyncStorage.getItem('@water_reminder_window_start')).toBeNull();
     expect(await AsyncStorage.getItem('@water_reminder_window_end')).toBeNull();
   });
@@ -87,5 +101,43 @@ describe('saveReminderWindow validation', () => {
     expect(result).toEqual({ ok: true });
     const state = await loadWaterState();
     expect(state.reminderWindow).toEqual(window);
+  });
+});
+
+describe('loadWaterState reminder window repair', () => {
+  it('self-heals when both window keys exist but one value is unparseable', async () => {
+    await AsyncStorage.multiSet([
+      ['@water_reminder_window_start', '08:30'],
+      ['@water_reminder_window_end', 'bad'],
+    ]);
+
+    const state = await loadWaterState();
+
+    expect(state.reminderWindow).toEqual({
+      start: { hour: 8, minute: 30 },
+      end: { hour: 17, minute: 0 },
+    });
+    expect(await AsyncStorage.getItem('@water_reminder_window_start')).toBe('08:30');
+    expect(await AsyncStorage.getItem('@water_reminder_window_end')).toBe('17:00');
+  });
+
+  it('self-heals when only one window key is stored', async () => {
+    await AsyncStorage.setItem('@water_reminder_window_start', '09:00');
+
+    const state = await loadWaterState();
+
+    expect(state.reminderWindow).toEqual({
+      start: { hour: 8, minute: 30 },
+      end: { hour: 17, minute: 0 },
+    });
+    expect(await AsyncStorage.getItem('@water_reminder_window_start')).toBe('08:30');
+    expect(await AsyncStorage.getItem('@water_reminder_window_end')).toBe('17:00');
+  });
+
+  it('does not write window keys on a fresh install', async () => {
+    await loadWaterState();
+
+    expect(await AsyncStorage.getItem('@water_reminder_window_start')).toBeNull();
+    expect(await AsyncStorage.getItem('@water_reminder_window_end')).toBeNull();
   });
 });

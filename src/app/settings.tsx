@@ -84,14 +84,11 @@ export default function SettingsScreen() {
             t("settings.alertInvalidGoalTitle"),
             t("settings.alertInvalidGoalMessage"),
           );
-          return;
-        }
-        if (result.error === "glass") {
+        } else if (result.error === "glass") {
           Alert.alert(
             t("settings.alertInvalidGlassTitle"),
             t("settings.alertInvalidGlassMessage"),
           );
-          return;
         }
         return;
       }

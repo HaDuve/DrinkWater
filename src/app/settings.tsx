@@ -1,5 +1,4 @@
 import { useFocusEffect } from "@react-navigation/native";
-import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -48,11 +47,10 @@ const IOS_KAV_FINE_TUNE = 0;
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
-  const { picker } = useLocalSearchParams<{ picker?: string }>();
-  const pickerVariant = TIME_PICKER_PROTOTYPE_VARIANTS.find(
-    (variant) => variant.key === picker,
-  )?.key;
-  const isTimePickerPrototype = __DEV__ && pickerVariant != null;
+  const [timePickerPrototypeActive, setTimePickerPrototypeActive] = useState(false);
+  const [timePickerVariant, setTimePickerVariant] =
+    useState<TimePickerPrototypeVariant>("A");
+  const isTimePickerPrototype = __DEV__ && timePickerPrototypeActive;
   const tabBarBottomInset = useTabBarBottomInset();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
@@ -202,7 +200,7 @@ export default function SettingsScreen() {
                 <ThemedText type="small" themeColor="textSecondary">
                   PROTOTYPE — native time picker variants on Settings
                 </ThemedText>
-                {pickerVariant === "A" ? (
+                {timePickerVariant === "A" ? (
                   <VariantA
                     label={t("settings.notifyTime")}
                     start={reminderWindow.start}
@@ -211,7 +209,7 @@ export default function SettingsScreen() {
                     onEndChange={setWindowEnd}
                   />
                 ) : null}
-                {pickerVariant === "B" ? (
+                {timePickerVariant === "B" ? (
                   <VariantB
                     label={t("settings.notifyTime")}
                     start={reminderWindow.start}
@@ -220,7 +218,7 @@ export default function SettingsScreen() {
                     onEndChange={setWindowEnd}
                   />
                 ) : null}
-                {pickerVariant === "C" ? (
+                {timePickerVariant === "C" ? (
                   <VariantC
                     label={t("settings.notifyTime")}
                     start={reminderWindow.start}
@@ -230,7 +228,7 @@ export default function SettingsScreen() {
                   />
                 ) : null}
                 <PrototypeStatePanel
-                  variant={pickerVariant as TimePickerPrototypeVariant}
+                  variant={timePickerVariant}
                   start={reminderWindow.start}
                   end={reminderWindow.end}
                 />
@@ -275,6 +273,37 @@ export default function SettingsScreen() {
             <ThemedText type="linkPrimary">{t("settings.privacyPolicy")}</ThemedText>
           </ExternalLink>
         </View>
+
+        {__DEV__ ? (
+          <View style={styles.prototypeDevSection}>
+            {isTimePickerPrototype ? (
+              <Pressable
+                onPress={() => setTimePickerPrototypeActive(false)}
+                style={({ pressed }) => [
+                  styles.prototypeDevButton,
+                  styles.prototypeDevButtonExit,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <ThemedText type="smallBold" style={styles.prototypeDevButtonText}>
+                  Exit time picker prototype
+                </ThemedText>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => setTimePickerPrototypeActive(true)}
+                style={({ pressed }) => [
+                  styles.prototypeDevButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <ThemedText type="smallBold" style={styles.prototypeDevButtonText}>
+                  PROTOTYPE: Compare native time pickers
+                </ThemedText>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
       </View>
     </TouchableWithoutFeedback>
   );
@@ -304,8 +333,11 @@ export default function SettingsScreen() {
       </SafeAreaView>
       {isTimePickerPrototype ? (
         <PrototypeSwitcher
-          paramName="picker"
           variants={[...TIME_PICKER_PROTOTYPE_VARIANTS]}
+          currentKey={timePickerVariant}
+          onVariantChange={(key) =>
+            setTimePickerVariant(key as TimePickerPrototypeVariant)
+          }
         />
       ) : null}
     </ThemedView>
@@ -368,6 +400,23 @@ const styles = StyleSheet.create({
   legalSection: {
     paddingTop: Spacing.two,
     paddingBottom: Spacing.one,
+  },
+  prototypeDevSection: {
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.two,
+  },
+  prototypeDevButton: {
+    backgroundColor: "#92400E",
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.two,
+    alignItems: "center",
+  },
+  prototypeDevButtonExit: {
+    backgroundColor: "#374151",
+  },
+  prototypeDevButtonText: {
+    color: "#FDE68A",
   },
   saveBtn: {
     backgroundColor: "#208AEF",

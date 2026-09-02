@@ -1,7 +1,6 @@
 /**
  * PROTOTYPE — throwaway UI variant switcher. Dev-only; never ship to production.
  */
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -12,13 +11,11 @@ export type PrototypeVariant = {
 
 type Props = {
   variants: PrototypeVariant[];
-  paramName: string;
+  currentKey: string;
+  onVariantChange: (key: string) => void;
 };
 
-export function PrototypeSwitcher({ variants, paramName }: Props) {
-  const router = useRouter();
-  const params = useLocalSearchParams<Record<string, string>>();
-  const currentKey = params[paramName] ?? variants[0]?.key ?? 'A';
+export function PrototypeSwitcher({ variants, currentKey, onVariantChange }: Props) {
   const currentIndex = Math.max(
     0,
     variants.findIndex((variant) => variant.key === currentKey),
@@ -28,10 +25,7 @@ export function PrototypeSwitcher({ variants, paramName }: Props) {
   const goToIndex = (nextIndex: number) => {
     const variant = variants[nextIndex];
     if (!variant) return;
-    router.replace({
-      pathname: '/settings',
-      params: { ...params, [paramName]: variant.key },
-    });
+    onVariantChange(variant.key);
   };
 
   useEffect(() => {
@@ -50,13 +44,11 @@ export function PrototypeSwitcher({ variants, paramName }: Props) {
 
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
-        const prev = (currentIndex - 1 + variants.length) % variants.length;
-        goToIndex(prev);
+        goToIndex((currentIndex - 1 + variants.length) % variants.length);
       }
       if (event.key === 'ArrowRight') {
         event.preventDefault();
-        const next = (currentIndex + 1) % variants.length;
-        goToIndex(next);
+        goToIndex((currentIndex + 1) % variants.length);
       }
     };
 
@@ -64,7 +56,7 @@ export function PrototypeSwitcher({ variants, paramName }: Props) {
       window.addEventListener('keydown', onKeyDown);
       return () => window.removeEventListener('keydown', onKeyDown);
     }
-  }, [currentIndex, paramName, variants]);
+  }, [currentIndex, variants]);
 
   if (!__DEV__) return null;
 

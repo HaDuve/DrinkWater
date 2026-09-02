@@ -1,0 +1,112 @@
+export type TimeOfDay = {
+  hour: number;
+  minute: number;
+};
+
+export type ReminderWindow = {
+  start: TimeOfDay;
+  end: TimeOfDay;
+};
+
+export type GlassScheduleInput = {
+  goalMl: number;
+  glassMl: number;
+  window: ReminderWindow;
+};
+
+export type GlassScheduleError =
+  | 'end_before_or_equal_start'
+  | 'overnight_window'
+  | 'slots_too_close';
+
+export type GlassSchedule = {
+  glassCount: number;
+  slots: TimeOfDay[];
+};
+
+export type GlassScheduleResult =
+  | { ok: true; schedule: GlassSchedule }
+  | { ok: false; error: GlassScheduleError };
+
+const MIN_SLOT_GAP_MINUTES = 5;
+
+export function countDailyGlasses(goalMl: number, glassMl: number): number {
+  return Math.ceil(goalMl / glassMl);
+}
+
+export function formatTimeOfDay(time: TimeOfDay): string {
+  const hour = String(time.hour).padStart(2, '0');
+  const minute = String(time.minute).padStart(2, '0');
+  return `${hour}:${minute}`;
+}
+
+function timeToMinutes(time: TimeOfDay): number {
+  return time.hour * 60 + time.minute;
+}
+
+function minutesToTime(minutes: number): TimeOfDay {
+  const rounded = Math.round(minutes);
+  const hour = Math.floor(rounded / 60);
+  const minute = rounded % 60;
+  return { hour, minute };
+}
+
+function buildEvenSlots(window: ReminderWindow, glassCount: number): TimeOfDay[] {
+  const startMinutes = timeToMinutes(window.start);
+  const endMinutes = timeToMinutes(window.end);
+
+  if (glassCount === 1) {
+    return [minutesToTime((startMinutes + endMinutes) / 2)];
+  }
+
+  const span = endMinutes - startMinutes;
+  return Array.from({ length: glassCount }, (_, index) => {
+    const minutes = startMinutes + (span * index) / (glassCount - 1);
+    return minutesToTime(minutes);
+  });
+}
+
+function hasSlotsTooClose(slots: TimeOfDay[]): boolean {
+  if (slots.length < 2) return false;
+
+  const minuteValues = slots.map(timeToMinutes);
+  for (let index = 1; index < minuteValues.length; index += 1) {
+    if (minuteValues[index] - minuteValues[index - 1] < MIN_SLOT_GAP_MINUTES) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function validateWindow(window: ReminderWindow): GlassScheduleError | null {
+  const startMinutes = timeToMinutes(window.start);
+  const endMinutes = timeToMinutes(window.end);
+
+  if (endMinutes <= startMinutes) {
+    if (endMinutes < startMinutes) {
+      return 'overnight_window';
+    }
+    return 'end_before_or_equal_start';
+  }
+
+  return null;
+}
+
+export function buildGlassSchedule(input: GlassScheduleInput): GlassScheduleResult {
+  const windowError = validateWindow(input.window);
+  if (windowError) {
+    return { ok: false, error: windowError };
+  }
+
+  const glassCount = countDailyGlasses(input.goalMl, input.glassMl);
+  const slots = buildEvenSlots(input.window, glassCount);
+
+  if (hasSlotsTooClose(slots)) {
+    return { ok: false, error: 'slots_too_close' };
+  }
+
+  return {
+    ok: true,
+    schedule: { glassCount, slots },
+  };
+}

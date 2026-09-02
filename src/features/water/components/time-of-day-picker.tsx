@@ -10,6 +10,7 @@ import {
   formatTimeOfDay,
   type TimeOfDay,
 } from '@/features/water/domain/glass-schedule';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
@@ -42,7 +43,8 @@ function parseTimeInput(raw: string): TimeOfDay | null {
 
 export function TimeOfDayPicker({ label, value, onChange }: Props) {
   const theme = useTheme();
-  const [showPicker, setShowPicker] = useState(Platform.OS === 'ios');
+  const colorScheme = useColorScheme();
+  const [showPicker, setShowPicker] = useState(false);
 
   const handleChange = (event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') {
@@ -53,9 +55,7 @@ export function TimeOfDayPicker({ label, value, onChange }: Props) {
   };
 
   const openPicker = () => {
-    if (Platform.OS === 'android') {
-      setShowPicker(true);
-    }
+    setShowPicker(true);
   };
 
   if (Platform.OS === 'web') {
@@ -85,30 +85,34 @@ export function TimeOfDayPicker({ label, value, onChange }: Props) {
     );
   }
 
+  const inputStyle = [
+    styles.input,
+    {
+      borderColor: theme.backgroundElement,
+      backgroundColor: theme.backgroundElement,
+    },
+  ];
+
   return (
     <View style={styles.field}>
       <ThemedText type="smallBold">{label}</ThemedText>
-      {Platform.OS === 'android' ? (
-        <Pressable
-          onPress={openPicker}
-          style={({ pressed }) => [
-            styles.input,
-            {
-              borderColor: theme.backgroundElement,
-              backgroundColor: theme.backgroundElement,
-              opacity: pressed ? 0.85 : 1,
-            },
-          ]}
-        >
-          <ThemedText>{formatTimeOfDay(value)}</ThemedText>
-        </Pressable>
-      ) : null}
+      <Pressable
+        onPress={openPicker}
+        style={({ pressed }) => [inputStyle, pressed && styles.pressed]}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityHint="Opens time picker"
+      >
+        <ThemedText>{formatTimeOfDay(value)}</ThemedText>
+      </Pressable>
       {showPicker ? (
         <DateTimePicker
           value={timeOfDayToDate(value)}
           mode="time"
           is24Hour
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          display={Platform.OS === 'ios' ? 'compact' : 'default'}
+          themeVariant={colorScheme === 'dark' ? 'dark' : 'light'}
+          accentColor="#208AEF"
           onChange={handleChange}
         />
       ) : null}
@@ -125,5 +129,8 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

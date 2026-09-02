@@ -102,26 +102,6 @@ export default function HistoryScreen() {
               );
             })}
           </View>
-          {!isScreenshotDemo ? (
-            <Pressable
-              onPress={() => {
-                if (!state) return;
-                if (isDebugMode) {
-                  setIsDebugMode(false);
-                  return;
-                }
-                setDebugHistory(generateFakeHistory(90, state.goalMl));
-                setIsDebugMode(true);
-              }}
-              style={[
-                styles.debugButton,
-                { backgroundColor: isDebugMode ? '#24A148' : theme.backgroundSelected },
-              ]}>
-              <ThemedText type="smallBold" themeColor={isDebugMode ? 'background' : 'textSecondary'}>
-                {isDebugMode ? t('history.debugModeOn') : t('history.debugModeOff')}
-              </ThemedText>
-            </Pressable>
-          ) : null}
 
           <ThemedText type="small" themeColor="textSecondary">
             {selectedRange === 7
@@ -282,12 +262,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.two,
     borderRadius: Spacing.two,
-  },
-  debugButton: {
-    alignSelf: 'flex-start',
-    borderRadius: Spacing.two,
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.two,
   },
   summaryCard: {
     padding: Spacing.three,

@@ -15,6 +15,7 @@ export type GlassScheduleInput = {
 };
 
 export type GlassScheduleError =
+  | 'invalid_glass_size'
   | 'end_before_or_equal_start'
   | 'overnight_window'
   | 'slots_too_close';
@@ -78,6 +79,14 @@ function hasSlotsTooClose(slots: TimeOfDay[]): boolean {
   return false;
 }
 
+function validateGlassSize(glassMl: number): GlassScheduleError | null {
+  if (glassMl <= 0) {
+    return 'invalid_glass_size';
+  }
+
+  return null;
+}
+
 function validateWindow(window: ReminderWindow): GlassScheduleError | null {
   const startMinutes = timeToMinutes(window.start);
   const endMinutes = timeToMinutes(window.end);
@@ -93,6 +102,11 @@ function validateWindow(window: ReminderWindow): GlassScheduleError | null {
 }
 
 export function buildGlassSchedule(input: GlassScheduleInput): GlassScheduleResult {
+  const glassSizeError = validateGlassSize(input.glassMl);
+  if (glassSizeError) {
+    return { ok: false, error: glassSizeError };
+  }
+
   const windowError = validateWindow(input.window);
   if (windowError) {
     return { ok: false, error: windowError };

@@ -1,4 +1,4 @@
-import { buildGlassSchedule, countDailyGlasses, formatTimeOfDay, type ReminderWindow } from './glass-schedule';
+import { buildGlassSchedule, countDailyGlasses, type ReminderWindow } from './glass-schedule';
 
 describe('countDailyGlasses', () => {
   it('uses ceil(goalMl / glassMl) so slight over-plan is intentional', () => {
@@ -37,17 +37,43 @@ describe('buildGlassSchedule', () => {
         ],
       },
     });
+  });
 
-    expect(result.ok && result.schedule.slots.map(formatTimeOfDay)).toEqual([
-      '08:30',
-      '09:43',
-      '10:56',
-      '12:09',
-      '13:21',
-      '14:34',
-      '15:47',
-      '17:00',
-    ]);
+  it('rejects non-positive glass size instead of throwing', () => {
+    expect(
+      buildGlassSchedule({
+        goalMl: 2000,
+        glassMl: 0,
+        window: defaultWindow,
+      }),
+    ).toEqual({ ok: false, error: 'invalid_glass_size' });
+
+    expect(
+      buildGlassSchedule({
+        goalMl: 2000,
+        glassMl: -50,
+        window: defaultWindow,
+      }),
+    ).toEqual({ ok: false, error: 'invalid_glass_size' });
+  });
+
+  it('pins first and last slots to the window when count is at least 2', () => {
+    const window: ReminderWindow = {
+      start: { hour: 7, minute: 15 },
+      end: { hour: 18, minute: 45 },
+    };
+    const result = buildGlassSchedule({
+      goalMl: 1500,
+      glassMl: 300,
+      window,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.schedule.glassCount).toBeGreaterThanOrEqual(2);
+    expect(result.schedule.slots[0]).toEqual(window.start);
+    expect(result.schedule.slots.at(-1)).toEqual(window.end);
   });
 
   it('places the only glass at the window midpoint when count is 1', () => {

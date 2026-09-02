@@ -1,11 +1,19 @@
 import {
   buildGlassSchedule,
   countDailyGlasses,
+  dateToTimeOfDay,
   parseTimeOfDayInput,
-  resolveTimeOfDayTextChange,
-  resolveTimeOfDayTextOnBlur,
+  timeOfDayToDate,
   type ReminderWindow,
 } from './glass-schedule';
+
+describe('timeOfDayToDate and dateToTimeOfDay', () => {
+  it('round-trips hour and minute through a Date', () => {
+    const reference = new Date('2026-01-15T12:00:00');
+    const time = { hour: 8, minute: 30 };
+    expect(dateToTimeOfDay(timeOfDayToDate(time, reference))).toEqual(time);
+  });
+});
 
 describe('parseTimeOfDayInput', () => {
   it('parses HH:MM strings into hour and minute', () => {
@@ -23,31 +31,6 @@ describe('parseTimeOfDayInput', () => {
   it('accepts single-digit hours for stored values', () => {
     expect(parseTimeOfDayInput('8:30')).toEqual({ hour: 8, minute: 30 });
     expect(parseTimeOfDayInput(' 09:00 ')).toEqual({ hour: 9, minute: 0 });
-  });
-});
-
-describe('resolveTimeOfDayTextChange', () => {
-  it('notifies the parent as soon as the text is a valid time', () => {
-    expect(resolveTimeOfDayTextChange('09:00')).toEqual({
-      notifyParent: { hour: 9, minute: 0 },
-      displayText: '09:00',
-    });
-  });
-
-  it('keeps partial input as a draft without notifying the parent', () => {
-    expect(resolveTimeOfDayTextChange('09:0')).toEqual({
-      displayText: '09:0',
-    });
-  });
-});
-
-describe('resolveTimeOfDayTextOnBlur', () => {
-  it('reverts invalid text to the last committed value', () => {
-    const fallback = { hour: 8, minute: 30 };
-    expect(resolveTimeOfDayTextOnBlur('bad', fallback)).toEqual({
-      notifyParent: null,
-      displayText: '08:30',
-    });
   });
 });
 

@@ -51,27 +51,17 @@ export function parseTimeOfDayInput(raw: string): TimeOfDay | null {
   return { hour, minute };
 }
 
-export type TimeOfDayTextChange =
-  | { notifyParent: TimeOfDay; displayText: string }
-  | { displayText: string };
-
-export function resolveTimeOfDayTextChange(text: string): TimeOfDayTextChange {
-  const parsed = parseTimeOfDayInput(text);
-  if (parsed) {
-    return { notifyParent: parsed, displayText: formatTimeOfDay(parsed) };
-  }
-  return { displayText: text };
+export function timeOfDayToDate(time: TimeOfDay, reference = new Date()): Date {
+  const date = new Date(reference);
+  date.setHours(time.hour, time.minute, 0, 0);
+  return date;
 }
 
-export function resolveTimeOfDayTextOnBlur(
-  text: string,
-  fallback: TimeOfDay,
-): { notifyParent: TimeOfDay | null; displayText: string } {
-  const parsed = parseTimeOfDayInput(text);
-  if (parsed) {
-    return { notifyParent: parsed, displayText: formatTimeOfDay(parsed) };
-  }
-  return { notifyParent: null, displayText: formatTimeOfDay(fallback) };
+export function dateToTimeOfDay(date: Date): TimeOfDay {
+  return {
+    hour: date.getHours(),
+    minute: date.getMinutes(),
+  };
 }
 
 function timeToMinutes(time: TimeOfDay): number {

@@ -1,23 +1,25 @@
-import { useCallback, useState } from 'react';
-import { Platform } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
 
-import type { ReminderWindow } from '@/features/water/domain/glass-schedule';
-import { syncWaterReminders } from '@/lib/notifications';
+import type { ReminderWindow, TimeOfDay } from '@/features/water/domain/glass-schedule';
+import { buildReminderWindowPreview } from '@/features/water/domain/reminder-window-preview';
+import { loadWaterState, type WaterSettings } from '@/lib/storage';
+
 import {
-  loadWaterState,
-  saveGlassMl,
-  saveGoalMl,
-  saveRemindersEnabled,
-  type WaterSettings,
-} from '@/lib/storage';
+  saveWaterSettings,
+  type SaveWaterSettingsResult,
+} from './save-water-settings';
+import type { SettingsSaveError } from './settings-save-alert';
 
-type ValidationError = 'goal' | 'glass';
+export type SettingsValidationError = SettingsSaveError;
+
+export type SettingsSaveResult = SaveWaterSettingsResult | { ok: false; error: 'settings_not_ready' };
 
 export function useSettingsModel() {
   const [loaded, setLoaded] = useState<WaterSettings | null>(null);
   const [goalInput, setGoalInput] = useState('');
   const [glassInput, setGlassInput] = useState('');
   const [reminders, setReminders] = useState(true);
+  const [reminderWindow, setReminderWindow] = useState<ReminderWindow | null>(null);
 
   const refresh = useCallback(() => {
     void loadWaterState().then((state) => {
@@ -25,36 +27,67 @@ export function useSettingsModel() {
       setGoalInput(String(state.goalMl));
       setGlassInput(String(state.glassMl));
       setReminders(state.remindersEnabled);
+      setReminderWindow(state.reminderWindow);
     });
   }, []);
 
-  const save = useCallback(async (): Promise<{ ok: true; notificationsHint: boolean } | { ok: false; error: ValidationError }> => {
-    const goal = Number.parseInt(goalInput, 10);
-    const glass = Number.parseInt(glassInput, 10);
-
-    if (!Number.isFinite(goal) || goal < 100) return { ok: false, error: 'goal' };
-    if (!Number.isFinite(glass) || glass < 50) return { ok: false, error: 'glass' };
-
-    await saveGoalMl(goal);
-    await saveGlassMl(glass);
-    await saveRemindersEnabled(reminders);
-    const window =
-      loaded?.reminderWindow ?? (await loadWaterState()).reminderWindow;
-    await syncWaterReminders(reminders, {
-      goalMl: goal,
-      glassMl: glass,
-      window,
+  const setWindowStart = useCallback((start: TimeOfDay) => {
+    setReminderWindow((current) => {
+      if (!current) {
+        return { start, end: { hour: 17, minute: 0 } };
+      }
+      return { ...current, start };
     });
-    refresh();
+  }, []);
 
-    return { ok: true, notificationsHint: reminders && Platform.OS !== 'web' };
-  }, [goalInput, glassInput, reminders, loaded, refresh]);
+  const setWindowEnd = useCallback((end: TimeOfDay) => {
+    setReminderWindow((current) => {
+      if (!current) {
+        return { start: { hour: 8, minute: 30 }, end };
+      }
+      return { ...current, end };
+    });
+  }, []);
 
-  const reminderWindow: ReminderWindow | null = loaded?.reminderWindow ?? null;
+  const preview = useMemo(() => {
+    if (!reminderWindow) return null;
+
+    const goalMl = Number.parseInt(goalInput, 10);
+    const glassMl = Number.parseInt(glassInput, 10);
+    if (!Number.isFinite(goalMl) || !Number.isFinite(glassMl)) return null;
+
+    return buildReminderWindowPreview({
+      goalMl,
+      glassMl,
+      window: reminderWindow,
+    });
+  }, [goalInput, glassInput, reminderWindow]);
+
+  const save = useCallback(async (): Promise<SettingsSaveResult> => {
+    if (!reminderWindow) {
+      return { ok: false, error: 'settings_not_ready' };
+    }
+
+    const result = await saveWaterSettings({
+      goalMl: Number.parseInt(goalInput, 10),
+      glassMl: Number.parseInt(glassInput, 10),
+      remindersEnabled: reminders,
+      reminderWindow,
+    });
+
+    if (result.ok) {
+      refresh();
+    }
+
+    return result;
+  }, [goalInput, glassInput, reminders, reminderWindow, refresh]);
 
   return {
     loaded,
     reminderWindow,
+    setWindowStart,
+    setWindowEnd,
+    preview,
     goalInput,
     setGoalInput,
     glassInput,

@@ -25,6 +25,8 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PRIVACY_POLICY_URL } from "@/constants/urls";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
+import { TimeOfDayPicker } from "@/features/water/components/time-of-day-picker";
+import { resolveSettingsSaveAlert } from "@/features/water/hooks/settings-save-alert";
 import { useSettingsModel } from "@/features/water/hooks/use-settings-model";
 import { useTabBarBottomInset } from "@/hooks/use-tab-bar-bottom-inset";
 import { useTheme } from "@/hooks/use-theme";
@@ -41,6 +43,10 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const {
     loaded,
+    reminderWindow,
+    setWindowStart,
+    setWindowEnd,
+    preview,
     goalInput,
     setGoalInput,
     glassInput,
@@ -79,17 +85,8 @@ export default function SettingsScreen() {
     Keyboard.dismiss();
     void save().then((result) => {
       if (!result.ok) {
-        if (result.error === "goal") {
-          Alert.alert(
-            t("settings.alertInvalidGoalTitle"),
-            t("settings.alertInvalidGoalMessage"),
-          );
-        } else if (result.error === "glass") {
-          Alert.alert(
-            t("settings.alertInvalidGlassTitle"),
-            t("settings.alertInvalidGlassMessage"),
-          );
-        }
+        const alertKeys = resolveSettingsSaveAlert(result.error);
+        Alert.alert(t(alertKeys.titleKey), t(alertKeys.messageKey));
         return;
       }
 
@@ -182,6 +179,38 @@ export default function SettingsScreen() {
             placeholderTextColor={theme.textSecondary}
           />
         </View>
+
+        {reminderWindow ? (
+          <>
+            <ThemedText type="small" themeColor="textSecondary">
+              {t("settings.reminderWindowHint")}
+            </ThemedText>
+
+            <TimeOfDayPicker
+              label={t("settings.reminderWindowStart")}
+              value={reminderWindow.start}
+              onChange={setWindowStart}
+            />
+
+            <TimeOfDayPicker
+              label={t("settings.reminderWindowEnd")}
+              value={reminderWindow.end}
+              onChange={setWindowEnd}
+            />
+
+            {preview ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                {preview.ok
+                  ? t("settings.reminderPlanPreview", {
+                      count: preview.glassCount,
+                      start: preview.windowStart,
+                      end: preview.windowEnd,
+                    })
+                  : t("settings.reminderPlanInvalid")}
+              </ThemedText>
+            ) : null}
+          </>
+        ) : null}
 
         <View style={styles.row}>
           <ThemedText type="smallBold">{t("settings.reminders")}</ThemedText>

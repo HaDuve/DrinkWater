@@ -20,17 +20,31 @@ export const en = {
     title: "Settings",
     dailyGoalMl: "Daily goal (ml)",
     glassSizeMl: "Glass size (ml)",
-    reminderIntervalHours: "Reminder interval (hours)",
-    reminderHint: "Repeating local notification every N hours (1–12).",
+    reminderWindowStart: "Reminder window start",
+    reminderWindowEnd: "Reminder window end",
+    reminderWindowHint:
+      "Evenly spaced glass reminders between these times each day.",
+    reminderPlanPreview:
+      "{{count}} glasses between {{start}} and {{end}}",
+    reminderPlanInvalid: "Adjust goal, glass size, or window to fit this plan.",
     reminders: "Reminders",
     save: "Save settings",
     alertInvalidGoalTitle: "Invalid goal",
     alertInvalidGoalMessage: "Daily goal must be at least 100 ml.",
     alertInvalidGlassTitle: "Invalid glass size",
     alertInvalidGlassMessage: "Glass size must be at least 50 ml.",
-    alertInvalidIntervalTitle: "Invalid interval",
-    alertInvalidIntervalMessage:
-      "Reminder interval must be between 1 and 12 hours.",
+    alertInvalidWindowTitle: "Invalid reminder window",
+    alertInvalidWindowEndBeforeStart:
+      "End time must be after start time on the same day.",
+    alertInvalidWindowOvernight:
+      "Overnight windows are not supported. Keep start and end on the same day.",
+    alertInvalidWindowSlotsTooClose:
+      "This window is too short for the number of glasses. Widen the window or change goal or glass size.",
+    alertInvalidWindowGeneric:
+      "These settings do not fit a valid reminder plan. Check goal, glass size, and window.",
+    alertSettingsNotReadyTitle: "Settings not ready",
+    alertSettingsNotReadyMessage:
+      "Reminder window settings are still loading. Try again in a moment.",
     alertSavedTitle: "Saved",
     alertSavedNotificationsHint: "Allow notifications if prompted.",
     alertSavedGeneric: "Your settings were updated.",

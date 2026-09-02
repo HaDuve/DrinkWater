@@ -22,18 +22,32 @@ export const de: TranslationResources = {
     title: "Einstellungen",
     dailyGoalMl: "Tagesziel (ml)",
     glassSizeMl: "Glasmenge (ml)",
-    reminderIntervalHours: "Erinnerungsintervall (Stunden)",
-    reminderHint:
-      "Wiederholende lokale Benachrichtigung alle N Stunden (1–12).",
+    reminderWindowStart: "Erinnerungsfenster Start",
+    reminderWindowEnd: "Erinnerungsfenster Ende",
+    reminderWindowHint:
+      "Gleichmäßig verteilte Glaserinnerungen zwischen diesen Zeiten pro Tag.",
+    reminderPlanPreview:
+      "{{count}} Gläser zwischen {{start}} und {{end}}",
+    reminderPlanInvalid:
+      "Passe Ziel, Glasmenge oder Fenster an, damit der Plan passt.",
     reminders: "Erinnerungen",
     save: "Einstellungen speichern",
     alertInvalidGoalTitle: "Ungültiges Ziel",
     alertInvalidGoalMessage: "Das Tagesziel muss mindestens 100 ml betragen.",
     alertInvalidGlassTitle: "Ungültige Glasmenge",
     alertInvalidGlassMessage: "Die Glasmenge muss mindestens 50 ml betragen.",
-    alertInvalidIntervalTitle: "Ungültiges Intervall",
-    alertInvalidIntervalMessage:
-      "Das Erinnerungsintervall muss zwischen 1 und 12 Stunden liegen.",
+    alertInvalidWindowTitle: "Ungültiges Erinnerungsfenster",
+    alertInvalidWindowEndBeforeStart:
+      "Die Endzeit muss nach der Startzeit am selben Tag liegen.",
+    alertInvalidWindowOvernight:
+      "Übernacht-Fenster werden nicht unterstützt. Start und Ende müssen am selben Tag liegen.",
+    alertInvalidWindowSlotsTooClose:
+      "Das Fenster ist für die Anzahl Gläser zu kurz. Vergrößere das Fenster oder passe Ziel oder Glasmenge an.",
+    alertInvalidWindowGeneric:
+      "Diese Einstellungen ergeben keinen gültigen Erinnerungsplan. Prüfe Ziel, Glasmenge und Fenster.",
+    alertSettingsNotReadyTitle: "Einstellungen nicht bereit",
+    alertSettingsNotReadyMessage:
+      "Das Erinnerungsfenster wird noch geladen. Versuche es gleich noch einmal.",
     alertSavedTitle: "Gespeichert",
     alertSavedNotificationsHint:
       "Erlaube Benachrichtigungen, falls danach gefragt wird.",

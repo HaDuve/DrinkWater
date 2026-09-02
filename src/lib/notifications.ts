@@ -6,6 +6,7 @@ import {
   type GlassScheduleInput,
   type TimeOfDay,
 } from '@/features/water/domain/glass-schedule';
+import { pickNextGlassSlot } from '@/features/water/domain/next-glass-slot';
 import i18next from '@/i18n/i18n';
 
 const LEGACY_NOTIFICATION_ID_KEY = '@water_reminder_notification_id';
@@ -47,7 +48,7 @@ export type WaterReminderUiState =
   | { kind: 'app_off' }
   | { kind: 'no_permission' }
   | { kind: 'inactive' }
-  | { kind: 'active'; nextTriggerMs: number };
+  | { kind: 'active'; nextTriggerMs: number; nextSlot: TimeOfDay; slotDay: 'today' | 'tomorrow' };
 
 function timeOfDaySortKey(time: TimeOfDay): number {
   return time.hour * 60 + time.minute;
@@ -153,12 +154,18 @@ async function resolveWaterReminderUiState(
         return Notifications.getNextTriggerDateAsync(waterReminderTriggerFromSlot(slot));
       }),
     );
-    const nextTriggerMs = nextTriggerDates
-      .filter((value): value is number => value != null)
-      .sort((a, b) => a - b)[0];
+    const hasScheduledTrigger = nextTriggerDates.some((value) => value != null);
+    if (!hasScheduledTrigger) return { kind: 'inactive' };
 
-    if (nextTriggerMs == null) return { kind: 'inactive' };
-    return { kind: 'active', nextTriggerMs };
+    const nextSlot = pickNextGlassSlot(scheduleResult.schedule.slots, new Date());
+    if (!nextSlot) return { kind: 'inactive' };
+
+    return {
+      kind: 'active',
+      nextTriggerMs: nextSlot.triggerMs,
+      nextSlot: nextSlot.slot,
+      slotDay: nextSlot.kind,
+    };
   } catch {
     return { kind: 'inactive' };
   }

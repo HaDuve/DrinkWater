@@ -1,28 +1,16 @@
 import { Link } from 'expo-router';
-import type { TFunction } from 'i18next';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { buildNextGlassReminderBody } from '@/features/water/components/next-glass-reminder-copy';
 import { useTheme } from '@/hooks/use-theme';
 import type { WaterReminderUiState } from '@/lib/notifications';
 
 const DOT_SIZE = 6;
 const ACTIVE_DOT = '#22c55e';
-
-function formatReminderIn(msFromNow: number, t: TFunction): string {
-  if (!Number.isFinite(msFromNow) || msFromNow <= 0) return t('reminder.timeSoon');
-  if (msFromNow < 60_000) return t('reminder.timeLessThanMinute');
-  const mins = Math.round(msFromNow / 60_000);
-  if (mins < 60) return t('reminder.timeMinutes', { count: mins });
-  const h = mins / 60;
-  if (Math.abs(h - Math.round(h)) < 0.06) {
-    return t('reminder.timeHoursWhole', { count: Math.round(h) });
-  }
-  return t('reminder.timeHoursDecimal', { hours: h.toFixed(1) });
-}
 
 type Props = {
   status: WaterReminderUiState;
@@ -39,9 +27,14 @@ export function WaterReminderInfo({ status }: Props) {
     return () => clearInterval(id);
   }, [status.kind]);
 
-  const nextIn =
+  const reminderBody =
     status.kind === 'active'
-      ? formatReminderIn(status.nextTriggerMs - Date.now(), t)
+      ? buildNextGlassReminderBody(
+          status.nextSlot,
+          status.slotDay,
+          status.nextTriggerMs - Date.now(),
+          t,
+        )
       : null;
 
   const expectingNext = status.kind === 'active';
@@ -66,7 +59,7 @@ export function WaterReminderInfo({ status }: Props) {
       showSettingsLink = true;
       break;
     case 'active':
-      body = t('reminder.nextIn', { time: nextIn });
+      body = reminderBody ?? t('reminder.inactive');
       break;
   }
 

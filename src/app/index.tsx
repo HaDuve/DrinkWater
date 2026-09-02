@@ -11,7 +11,7 @@ import { WaterProgressRing } from '@/components/water-progress-ring';
 import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTabBarBottomInset } from '@/hooks/use-tab-bar-bottom-inset';
-import { getWaterReminderUiState, type WaterReminderUiState } from '@/lib/notifications';
+import { getWaterReminderUiState, LEGACY_NOTIFICATION_INTERVAL_HOURS, type WaterReminderUiState } from '@/lib/notifications';
 import type { WaterSettings } from '@/lib/storage';
 import { addGlassAmount, loadWaterState, removeGlassAmount } from '@/lib/storage';
 
@@ -24,7 +24,10 @@ export default function HomeScreen() {
   const refresh = useCallback(() => {
     void (async () => {
       const s = await loadWaterState();
-      const reminder = await getWaterReminderUiState(s.remindersEnabled, s.intervalHours);
+      const reminder = await getWaterReminderUiState(
+        s.remindersEnabled,
+        LEGACY_NOTIFICATION_INTERVAL_HOURS,
+      );
       setState(s);
       setReminderStatus(reminder);
     })();

@@ -1,20 +1,36 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import {
+  buildGlassSchedule,
+  type GlassScheduleError,
+  type ReminderWindow,
+  type TimeOfDay,
+} from '@/features/water/domain/glass-schedule';
+
 const KEYS = {
   goalMl: '@water_goal_ml',
   glassMl: '@water_glass_ml',
   intakeMl: '@water_intake_ml',
   dailyHistory: '@water_daily_history_v1',
-  intervalHours: '@water_interval_hours',
+  reminderWindowStart: '@water_reminder_window_start',
+  reminderWindowEnd: '@water_reminder_window_end',
   lastResetDate: '@water_last_reset_date',
   remindersEnabled: '@water_reminders_enabled',
 } as const;
+
+const LEGACY_KEYS = {
+  intervalHours: '@water_interval_hours',
+} as const;
+
+const DEFAULT_REMINDER_WINDOW: ReminderWindow = {
+  start: { hour: 8, minute: 30 },
+  end: { hour: 17, minute: 0 },
+};
 
 const DEFAULTS = {
   goalMl: 2000,
   glassMl: 250,
   intakeMl: 0,
-  intervalHours: 2,
   remindersEnabled: true,
 };
 
@@ -36,10 +52,19 @@ export type WaterSettings = {
   goalMl: number;
   glassMl: number;
   intakeMl: number;
-  intervalHours: number;
+  reminderWindow: ReminderWindow;
   lastResetDate: string;
   remindersEnabled: boolean;
 };
+
+export type SaveReminderWindowContext = {
+  goalMl: number;
+  glassMl: number;
+};
+
+export type SaveReminderWindowResult =
+  | { ok: true }
+  | { ok: false; error: GlassScheduleError };
 
 export type DailyHistoryEntry = {
   date: string;
@@ -96,16 +121,74 @@ async function upsertHistoryForDate(date: string, intakeMl: number): Promise<voi
   await saveDailyHistoryMap(history);
 }
 
+function formatTimeOfDayForStorage(time: TimeOfDay): string {
+  const hour = String(time.hour).padStart(2, '0');
+  const minute = String(time.minute).padStart(2, '0');
+  return `${hour}:${minute}`;
+}
+
+function parseTimeOfDayFromStorage(value: string | null): TimeOfDay | null {
+  if (!value) return null;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+
+  const hour = Number.parseInt(match[1], 10);
+  const minute = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+  return { hour, minute };
+}
+
+function parseReminderWindow(raw: {
+  reminderWindowStart: string | null;
+  reminderWindowEnd: string | null;
+}): ReminderWindow {
+  const start = parseTimeOfDayFromStorage(raw.reminderWindowStart);
+  const end = parseTimeOfDayFromStorage(raw.reminderWindowEnd);
+  if (!start || !end) return DEFAULT_REMINDER_WINDOW;
+  return { start, end };
+}
+
+function hasStoredReminderWindow(raw: {
+  reminderWindowStart: string | null;
+  reminderWindowEnd: string | null;
+}): boolean {
+  return raw.reminderWindowStart != null && raw.reminderWindowEnd != null;
+}
+
+async function migrateLegacyIntervalHoursIfNeeded(raw: {
+  reminderWindowStart: string | null;
+  reminderWindowEnd: string | null;
+  legacyIntervalHours: string | null;
+}): Promise<ReminderWindow> {
+  if (hasStoredReminderWindow(raw)) {
+    if (raw.legacyIntervalHours != null) {
+      await AsyncStorage.removeItem(LEGACY_KEYS.intervalHours);
+    }
+    return parseReminderWindow(raw);
+  }
+
+  if (raw.legacyIntervalHours != null) {
+    await AsyncStorage.multiSet([
+      [KEYS.reminderWindowStart, formatTimeOfDayForStorage(DEFAULT_REMINDER_WINDOW.start)],
+      [KEYS.reminderWindowEnd, formatTimeOfDayForStorage(DEFAULT_REMINDER_WINDOW.end)],
+    ]);
+    await AsyncStorage.removeItem(LEGACY_KEYS.intervalHours);
+    return DEFAULT_REMINDER_WINDOW;
+  }
+
+  return DEFAULT_REMINDER_WINDOW;
+}
+
 function normalizeSettings(raw: {
   goalMl: string | null;
   glassMl: string | null;
-  intervalHours: string | null;
   remindersEnabled: string | null;
-}): Pick<WaterSettings, 'goalMl' | 'glassMl' | 'intervalHours' | 'remindersEnabled'> {
+}): Pick<WaterSettings, 'goalMl' | 'glassMl' | 'remindersEnabled'> {
   return {
     goalMl: Math.max(100, parseIntOrFallback(raw.goalMl, DEFAULTS.goalMl)),
     glassMl: Math.max(50, parseIntOrFallback(raw.glassMl, DEFAULTS.glassMl)),
-    intervalHours: Math.max(1, Math.min(12, parseIntOrFallback(raw.intervalHours, DEFAULTS.intervalHours))),
     remindersEnabled: raw.remindersEnabled !== 'false',
   };
 }
@@ -125,7 +208,9 @@ async function readRawWaterState(): Promise<{
   glassMl: string | null;
   intakeMl: string | null;
   dailyHistory: string | null;
-  intervalHours: string | null;
+  reminderWindowStart: string | null;
+  reminderWindowEnd: string | null;
+  legacyIntervalHours: string | null;
   lastResetDate: string | null;
   remindersEnabled: string | null;
 }> {
@@ -134,7 +219,9 @@ async function readRawWaterState(): Promise<{
     KEYS.glassMl,
     KEYS.intakeMl,
     KEYS.dailyHistory,
-    KEYS.intervalHours,
+    KEYS.reminderWindowStart,
+    KEYS.reminderWindowEnd,
+    LEGACY_KEYS.intervalHours,
     KEYS.lastResetDate,
     KEYS.remindersEnabled,
   ]);
@@ -143,9 +230,11 @@ async function readRawWaterState(): Promise<{
     glassMl: entries[1]?.[1] ?? null,
     intakeMl: entries[2]?.[1] ?? null,
     dailyHistory: entries[3]?.[1] ?? null,
-    intervalHours: entries[4]?.[1] ?? null,
-    lastResetDate: entries[5]?.[1] ?? null,
-    remindersEnabled: entries[6]?.[1] ?? null,
+    reminderWindowStart: entries[4]?.[1] ?? null,
+    reminderWindowEnd: entries[5]?.[1] ?? null,
+    legacyIntervalHours: entries[6]?.[1] ?? null,
+    lastResetDate: entries[7]?.[1] ?? null,
+    remindersEnabled: entries[8]?.[1] ?? null,
   };
 }
 
@@ -182,12 +271,13 @@ export async function loadWaterState(): Promise<WaterSettings> {
   const history = parseDailyHistory(raw.dailyHistory);
   const rolled = await rolloverIfNeeded(history, raw.lastResetDate, today, intakeMl);
   const settings = normalizeSettings(raw);
+  const reminderWindow = await migrateLegacyIntervalHoursIfNeeded(raw);
 
   return {
     goalMl: settings.goalMl,
     glassMl: settings.glassMl,
     intakeMl: rolled.intakeMl,
-    intervalHours: settings.intervalHours,
+    reminderWindow,
     lastResetDate: today,
     remindersEnabled: settings.remindersEnabled,
   };
@@ -201,9 +291,24 @@ export async function saveGlassMl(glassMl: number): Promise<void> {
   await AsyncStorage.setItem(KEYS.glassMl, String(Math.max(50, glassMl)));
 }
 
-export async function saveIntervalHours(hours: number): Promise<void> {
-  const h = Math.max(1, Math.min(12, Math.round(hours)));
-  await AsyncStorage.setItem(KEYS.intervalHours, String(h));
+export async function saveReminderWindow(
+  window: ReminderWindow,
+  context: SaveReminderWindowContext,
+): Promise<SaveReminderWindowResult> {
+  const validation = buildGlassSchedule({
+    goalMl: context.goalMl,
+    glassMl: context.glassMl,
+    window,
+  });
+  if (!validation.ok) {
+    return validation;
+  }
+
+  await AsyncStorage.multiSet([
+    [KEYS.reminderWindowStart, formatTimeOfDayForStorage(window.start)],
+    [KEYS.reminderWindowEnd, formatTimeOfDayForStorage(window.end)],
+  ]);
+  return { ok: true };
 }
 
 export async function saveRemindersEnabled(enabled: boolean): Promise<void> {

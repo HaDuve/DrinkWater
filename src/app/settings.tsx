@@ -169,6 +169,37 @@ export default function SettingsScreen() {
           {t("settings.title")}
         </ThemedText>
 
+        {__DEV__ ? (
+          <View style={styles.prototypeDevSection}>
+            {isTimePickerPrototype ? (
+              <Pressable
+                onPress={() => setTimePickerPrototypeActive(false)}
+                style={({ pressed }) => [
+                  styles.prototypeDevButton,
+                  styles.prototypeDevButtonExit,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <ThemedText type="smallBold" style={styles.prototypeDevButtonText}>
+                  Exit time picker prototype
+                </ThemedText>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => setTimePickerPrototypeActive(true)}
+                style={({ pressed }) => [
+                  styles.prototypeDevButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <ThemedText type="smallBold" style={styles.prototypeDevButtonText}>
+                  PROTOTYPE: Compare native time pickers
+                </ThemedText>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
+
         <View style={styles.field}>
           <ThemedText type="smallBold">{t("settings.dailyGoalMl")}</ThemedText>
           <TextInput
@@ -273,37 +304,6 @@ export default function SettingsScreen() {
             <ThemedText type="linkPrimary">{t("settings.privacyPolicy")}</ThemedText>
           </ExternalLink>
         </View>
-
-        {__DEV__ ? (
-          <View style={styles.prototypeDevSection}>
-            {isTimePickerPrototype ? (
-              <Pressable
-                onPress={() => setTimePickerPrototypeActive(false)}
-                style={({ pressed }) => [
-                  styles.prototypeDevButton,
-                  styles.prototypeDevButtonExit,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <ThemedText type="smallBold" style={styles.prototypeDevButtonText}>
-                  Exit time picker prototype
-                </ThemedText>
-              </Pressable>
-            ) : (
-              <Pressable
-                onPress={() => setTimePickerPrototypeActive(true)}
-                style={({ pressed }) => [
-                  styles.prototypeDevButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <ThemedText type="smallBold" style={styles.prototypeDevButtonText}>
-                  PROTOTYPE: Compare native time pickers
-                </ThemedText>
-              </Pressable>
-            )}
-          </View>
-        ) : null}
       </View>
     </TouchableWithoutFeedback>
   );

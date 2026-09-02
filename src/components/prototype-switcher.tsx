@@ -2,7 +2,9 @@
  * PROTOTYPE — throwaway UI variant switcher. Dev-only; never ship to production.
  */
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { useTabBarBottomInset } from '@/hooks/use-tab-bar-bottom-inset';
 
 export type PrototypeVariant = {
   key: string;
@@ -16,6 +18,7 @@ type Props = {
 };
 
 export function PrototypeSwitcher({ variants, currentKey, onVariantChange }: Props) {
+  const tabBarBottomInset = useTabBarBottomInset();
   const currentIndex = Math.max(
     0,
     variants.findIndex((variant) => variant.key === currentKey),
@@ -29,7 +32,7 @@ export function PrototypeSwitcher({ variants, currentKey, onVariantChange }: Pro
   };
 
   useEffect(() => {
-    if (!__DEV__) return;
+    if (!__DEV__ || Platform.OS !== 'web') return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -52,16 +55,17 @@ export function PrototypeSwitcher({ variants, currentKey, onVariantChange }: Pro
       }
     };
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('keydown', onKeyDown);
-      return () => window.removeEventListener('keydown', onKeyDown);
-    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [currentIndex, variants]);
 
   if (!__DEV__) return null;
 
   return (
-    <View style={styles.bar} pointerEvents="box-none">
+    <View
+      style={[styles.bar, { bottom: tabBarBottomInset + 16 }]}
+      pointerEvents="box-none"
+    >
       <Pressable
         accessibilityLabel="Previous prototype variant"
         onPress={() => goToIndex((currentIndex - 1 + variants.length) % variants.length)}

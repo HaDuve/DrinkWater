@@ -43,6 +43,11 @@ export const de: TranslationResources = {
       "Übernacht-Fenster werden nicht unterstützt. Start und Ende müssen am selben Tag liegen.",
     alertInvalidWindowSlotsTooClose:
       "Das Fenster ist für die Anzahl Gläser zu kurz. Vergrößere das Fenster oder passe Ziel oder Glasmenge an.",
+    alertInvalidWindowGeneric:
+      "Diese Einstellungen ergeben keinen gültigen Erinnerungsplan. Prüfe Ziel, Glasmenge und Fenster.",
+    alertSettingsNotReadyTitle: "Einstellungen nicht bereit",
+    alertSettingsNotReadyMessage:
+      "Das Erinnerungsfenster wird noch geladen. Versuche es gleich noch einmal.",
     alertSavedTitle: "Gespeichert",
     alertSavedNotificationsHint:
       "Erlaube Benachrichtigungen, falls danach gefragt wird.",

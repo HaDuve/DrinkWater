@@ -40,6 +40,11 @@ export const en = {
       "Overnight windows are not supported. Keep start and end on the same day.",
     alertInvalidWindowSlotsTooClose:
       "This window is too short for the number of glasses. Widen the window or change goal or glass size.",
+    alertInvalidWindowGeneric:
+      "These settings do not fit a valid reminder plan. Check goal, glass size, and window.",
+    alertSettingsNotReadyTitle: "Settings not ready",
+    alertSettingsNotReadyMessage:
+      "Reminder window settings are still loading. Try again in a moment.",
     alertSavedTitle: "Saved",
     alertSavedNotificationsHint: "Allow notifications if prompted.",
     alertSavedGeneric: "Your settings were updated.",

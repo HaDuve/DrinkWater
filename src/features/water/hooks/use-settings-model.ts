@@ -6,11 +6,13 @@ import { loadWaterState, type WaterSettings } from '@/lib/storage';
 
 import {
   saveWaterSettings,
-  type SaveWaterSettingsError,
   type SaveWaterSettingsResult,
 } from './save-water-settings';
+import type { SettingsSaveError } from './settings-save-alert';
 
-export type SettingsValidationError = SaveWaterSettingsError;
+export type SettingsValidationError = SettingsSaveError;
+
+export type SettingsSaveResult = SaveWaterSettingsResult | { ok: false; error: 'settings_not_ready' };
 
 export function useSettingsModel() {
   const [loaded, setLoaded] = useState<WaterSettings | null>(null);
@@ -61,9 +63,9 @@ export function useSettingsModel() {
     });
   }, [goalInput, glassInput, reminderWindow]);
 
-  const save = useCallback(async (): Promise<SaveWaterSettingsResult> => {
+  const save = useCallback(async (): Promise<SettingsSaveResult> => {
     if (!reminderWindow) {
-      return { ok: false, error: 'goal' };
+      return { ok: false, error: 'settings_not_ready' };
     }
 
     const result = await saveWaterSettings({

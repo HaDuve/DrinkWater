@@ -26,6 +26,7 @@ import { ThemedView } from "@/components/themed-view";
 import { PRIVACY_POLICY_URL } from "@/constants/urls";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
 import { TimeOfDayPicker } from "@/features/water/components/time-of-day-picker";
+import { resolveSettingsSaveAlert } from "@/features/water/hooks/settings-save-alert";
 import { useSettingsModel } from "@/features/water/hooks/use-settings-model";
 import { useTabBarBottomInset } from "@/hooks/use-tab-bar-bottom-inset";
 import { useTheme } from "@/hooks/use-theme";
@@ -84,32 +85,8 @@ export default function SettingsScreen() {
     Keyboard.dismiss();
     void save().then((result) => {
       if (!result.ok) {
-        if (result.error === "goal") {
-          Alert.alert(
-            t("settings.alertInvalidGoalTitle"),
-            t("settings.alertInvalidGoalMessage"),
-          );
-        } else if (result.error === "glass") {
-          Alert.alert(
-            t("settings.alertInvalidGlassTitle"),
-            t("settings.alertInvalidGlassMessage"),
-          );
-        } else if (result.error === "end_before_or_equal_start") {
-          Alert.alert(
-            t("settings.alertInvalidWindowTitle"),
-            t("settings.alertInvalidWindowEndBeforeStart"),
-          );
-        } else if (result.error === "overnight_window") {
-          Alert.alert(
-            t("settings.alertInvalidWindowTitle"),
-            t("settings.alertInvalidWindowOvernight"),
-          );
-        } else if (result.error === "slots_too_close") {
-          Alert.alert(
-            t("settings.alertInvalidWindowTitle"),
-            t("settings.alertInvalidWindowSlotsTooClose"),
-          );
-        }
+        const alertKeys = resolveSettingsSaveAlert(result.error);
+        Alert.alert(t(alertKeys.titleKey), t(alertKeys.messageKey));
         return;
       }
 

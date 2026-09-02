@@ -45,8 +45,6 @@ export default function SettingsScreen() {
     setGoalInput,
     glassInput,
     setGlassInput,
-    intervalInput,
-    setIntervalInput,
     reminders,
     setReminders,
     refresh,
@@ -86,19 +84,12 @@ export default function SettingsScreen() {
             t("settings.alertInvalidGoalTitle"),
             t("settings.alertInvalidGoalMessage"),
           );
-          return;
-        }
-        if (result.error === "glass") {
+        } else if (result.error === "glass") {
           Alert.alert(
             t("settings.alertInvalidGlassTitle"),
             t("settings.alertInvalidGlassMessage"),
           );
-          return;
         }
-        Alert.alert(
-          t("settings.alertInvalidIntervalTitle"),
-          t("settings.alertInvalidIntervalMessage"),
-        );
         return;
       }
 
@@ -190,23 +181,6 @@ export default function SettingsScreen() {
             placeholder="250"
             placeholderTextColor={theme.textSecondary}
           />
-        </View>
-
-        <View style={styles.field}>
-          <ThemedText type="smallBold">
-            {t("settings.reminderIntervalHours")}
-          </ThemedText>
-          <TextInput
-            keyboardType="number-pad"
-            value={intervalInput}
-            onChangeText={setIntervalInput}
-            style={inputStyle}
-            placeholder="2"
-            placeholderTextColor={theme.textSecondary}
-          />
-          <ThemedText type="small" themeColor="textSecondary">
-            {t("settings.reminderHint")}
-          </ThemedText>
         </View>
 
         <View style={styles.row}>

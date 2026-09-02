@@ -34,6 +34,9 @@ notifications?.setNotificationHandler({
   }),
 });
 
+/** Temporary bridge until glass-slot scheduling (#3). */
+export const LEGACY_NOTIFICATION_INTERVAL_HOURS = 2;
+
 /** Seconds between water reminders from interval hours (minimum 60s). */
 export function waterReminderIntervalSeconds(intervalHours: number): number {
   return Math.max(60, Math.round(intervalHours * 3600));

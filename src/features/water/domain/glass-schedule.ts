@@ -41,6 +41,39 @@ export function formatTimeOfDay(time: TimeOfDay): string {
   return `${hour}:${minute}`;
 }
 
+export function parseTimeOfDayInput(raw: string): TimeOfDay | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(raw.trim());
+  if (!match) return null;
+  const hour = Number.parseInt(match[1], 10);
+  const minute = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return { hour, minute };
+}
+
+export type TimeOfDayTextChange =
+  | { notifyParent: TimeOfDay; displayText: string }
+  | { displayText: string };
+
+export function resolveTimeOfDayTextChange(text: string): TimeOfDayTextChange {
+  const parsed = parseTimeOfDayInput(text);
+  if (parsed) {
+    return { notifyParent: parsed, displayText: formatTimeOfDay(parsed) };
+  }
+  return { displayText: text };
+}
+
+export function resolveTimeOfDayTextOnBlur(
+  text: string,
+  fallback: TimeOfDay,
+): { notifyParent: TimeOfDay | null; displayText: string } {
+  const parsed = parseTimeOfDayInput(text);
+  if (parsed) {
+    return { notifyParent: parsed, displayText: formatTimeOfDay(parsed) };
+  }
+  return { notifyParent: null, displayText: formatTimeOfDay(fallback) };
+}
+
 function timeToMinutes(time: TimeOfDay): number {
   return time.hour * 60 + time.minute;
 }

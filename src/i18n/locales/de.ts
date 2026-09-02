@@ -22,10 +22,9 @@ export const de: TranslationResources = {
     title: "Einstellungen",
     dailyGoalMl: "Tagesziel (ml)",
     glassSizeMl: "Glasmenge (ml)",
+    notifyTime: "Erinnerungszeit",
     reminderWindowStart: "Erinnerungsfenster Start",
     reminderWindowEnd: "Erinnerungsfenster Ende",
-    reminderWindowHint:
-      "Gleichmäßig verteilte Glaserinnerungen zwischen diesen Zeiten pro Tag.",
     reminderPlanPreview:
       "{{count}} Gläser zwischen {{start}} und {{end}}",
     reminderPlanInvalid:

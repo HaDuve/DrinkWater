@@ -25,7 +25,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PRIVACY_POLICY_URL } from "@/constants/urls";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
-import { TimeOfDayPicker } from "@/features/water/components/time-of-day-picker";
+import { ReminderWindowTimeInput } from "@/features/water/components/reminder-window-time-input";
 import { resolveSettingsSaveAlert } from "@/features/water/hooks/settings-save-alert";
 import { useSettingsModel } from "@/features/water/hooks/use-settings-model";
 import { useTabBarBottomInset } from "@/hooks/use-tab-bar-bottom-inset";
@@ -182,20 +182,14 @@ export default function SettingsScreen() {
 
         {reminderWindow ? (
           <>
-            <ThemedText type="small" themeColor="textSecondary">
-              {t("settings.reminderWindowHint")}
-            </ThemedText>
-
-            <TimeOfDayPicker
-              label={t("settings.reminderWindowStart")}
-              value={reminderWindow.start}
-              onChange={setWindowStart}
-            />
-
-            <TimeOfDayPicker
-              label={t("settings.reminderWindowEnd")}
-              value={reminderWindow.end}
-              onChange={setWindowEnd}
+            <ReminderWindowTimeInput
+              label={t("settings.notifyTime")}
+              start={reminderWindow.start}
+              end={reminderWindow.end}
+              onStartChange={setWindowStart}
+              onEndChange={setWindowEnd}
+              startAccessibilityLabel={t("settings.reminderWindowStart")}
+              endAccessibilityLabel={t("settings.reminderWindowEnd")}
             />
 
             {preview ? (

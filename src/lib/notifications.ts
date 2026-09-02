@@ -1,9 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
+import {
+  buildGlassSchedule,
+  type GlassScheduleInput,
+  type TimeOfDay,
+} from '@/features/water/domain/glass-schedule';
 import i18next from '@/i18n/i18n';
 
-const NOTIFICATION_ID_KEY = '@water_reminder_notification_id';
+const LEGACY_NOTIFICATION_ID_KEY = '@water_reminder_notification_id';
+const NOTIFICATION_IDS_KEY = '@water_reminder_notification_ids';
 
 type NotificationsModule = typeof import('expo-notifications');
 
@@ -34,32 +40,7 @@ notifications?.setNotificationHandler({
   }),
 });
 
-/** Temporary bridge until glass-slot scheduling (#3). */
-export const LEGACY_NOTIFICATION_INTERVAL_HOURS = 2;
-
-/** Seconds between water reminders from interval hours (minimum 60s). */
-export function waterReminderIntervalSeconds(intervalHours: number): number {
-  return Math.max(60, Math.round(intervalHours * 3600));
-}
-
-/** Trigger input used when scheduling and when resolving next fire time. */
-export function waterReminderTriggerFromIntervalHours(
-  intervalHours: number,
-): import('expo-notifications').SchedulableNotificationTriggerInput {
-  const Notifications = getNotificationsModule();
-  if (Notifications) {
-    return {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: waterReminderIntervalSeconds(intervalHours),
-      repeats: true,
-    };
-  }
-  return {
-    type: 'timeInterval' as unknown as import('expo-notifications').SchedulableTriggerInputTypes.TIME_INTERVAL,
-    seconds: waterReminderIntervalSeconds(intervalHours),
-    repeats: true,
-  };
-}
+export type WaterReminderScheduleInput = GlassScheduleInput;
 
 export type WaterReminderUiState =
   | { kind: 'web' }
@@ -68,35 +49,79 @@ export type WaterReminderUiState =
   | { kind: 'inactive' }
   | { kind: 'active'; nextTriggerMs: number };
 
-function timeIntervalFromNotificationTrigger(
-  trigger: import('expo-notifications').NotificationTrigger,
-): { seconds: number; repeats: boolean } | null {
-  if (
-    trigger === null ||
-    typeof trigger !== 'object' ||
-    !('seconds' in trigger) ||
-    !('repeats' in trigger)
-  ) {
-    return null;
-  }
-  const seconds = (trigger as { seconds: unknown }).seconds;
-  const repeats = (trigger as { repeats: unknown }).repeats;
-  if (typeof seconds !== 'number' || typeof repeats !== 'boolean') return null;
-  return { seconds, repeats };
+function timeOfDaySortKey(time: TimeOfDay): number {
+  return time.hour * 60 + time.minute;
 }
 
-function scheduledReminderMatchesInterval(
-  request: import('expo-notifications').NotificationRequest,
-  intervalHours: number,
+function sortTimeOfDaySlots(slots: TimeOfDay[]): TimeOfDay[] {
+  return [...slots].sort((a, b) => timeOfDaySortKey(a) - timeOfDaySortKey(b));
+}
+
+export function timeOfDayFromDailyTrigger(
+  trigger: import('expo-notifications').NotificationTrigger,
+): TimeOfDay | null {
+  if (trigger === null || typeof trigger !== 'object') return null;
+  if (!('hour' in trigger) || !('minute' in trigger)) return null;
+
+  const hour = (trigger as { hour: unknown }).hour;
+  const minute = (trigger as { minute: unknown }).minute;
+  if (typeof hour !== 'number' || typeof minute !== 'number') return null;
+
+  return { hour, minute };
+}
+
+export function scheduledGlassSlotsMatch(
+  scheduled: { trigger: import('expo-notifications').NotificationTrigger }[],
+  expectedSlots: TimeOfDay[],
 ): boolean {
-  const fromOs = timeIntervalFromNotificationTrigger(request.trigger);
-  if (!fromOs || !fromOs.repeats) return false;
-  return fromOs.seconds === waterReminderIntervalSeconds(intervalHours);
+  const fromOs = scheduled
+    .map((request) => timeOfDayFromDailyTrigger(request.trigger))
+    .filter((slot): slot is TimeOfDay => slot !== null);
+
+  if (fromOs.length !== expectedSlots.length) return false;
+
+  const actual = sortTimeOfDaySlots(fromOs);
+  const expected = sortTimeOfDaySlots(expectedSlots);
+  return actual.every(
+    (slot, index) =>
+      slot.hour === expected[index].hour && slot.minute === expected[index].minute,
+  );
+}
+
+/** Trigger input for one daily glass-slot reminder. */
+export function waterReminderTriggerFromSlot(
+  slot: TimeOfDay,
+): import('expo-notifications').SchedulableNotificationTriggerInput {
+  const Notifications = getNotificationsModule();
+  if (Notifications) {
+    return {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
+      hour: slot.hour,
+      minute: slot.minute,
+    };
+  }
+  return {
+    type: 'daily' as unknown as import('expo-notifications').SchedulableTriggerInputTypes.DAILY,
+    hour: slot.hour,
+    minute: slot.minute,
+  };
+}
+
+async function readStoredNotificationIds(): Promise<string[]> {
+  const raw = await AsyncStorage.getItem(NOTIFICATION_IDS_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id): id is string => typeof id === 'string');
+  } catch {
+    return [];
+  }
 }
 
 async function resolveWaterReminderUiState(
   remindersEnabled: boolean,
-  intervalHours: number,
+  input: WaterReminderScheduleInput,
 ): Promise<WaterReminderUiState> {
   if (Platform.OS === 'web') return { kind: 'web' };
   if (!remindersEnabled) return { kind: 'app_off' };
@@ -108,26 +133,32 @@ async function resolveWaterReminderUiState(
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') return { kind: 'no_permission' };
 
-    const storedId = await AsyncStorage.getItem(NOTIFICATION_ID_KEY);
+    const scheduleResult = buildGlassSchedule(input);
+    if (!scheduleResult.ok) return { kind: 'inactive' };
+
+    const storedIds = await readStoredNotificationIds();
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    const match = storedId
-      ? scheduled.find((n) => n.identifier === storedId)
-      : undefined;
+    const matched = storedIds
+      .map((id) => scheduled.find((request) => request.identifier === id))
+      .filter((request): request is import('expo-notifications').NotificationRequest => request !== undefined);
 
-    if (!match) return { kind: 'inactive' };
+    if (!scheduledGlassSlotsMatch(matched, scheduleResult.schedule.slots)) {
+      return { kind: 'inactive' };
+    }
 
-    const fromOs = timeIntervalFromNotificationTrigger(match.trigger);
-    const triggerForNext: import('expo-notifications').SchedulableNotificationTriggerInput = fromOs
-      ? {
-          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: fromOs.seconds,
-          repeats: fromOs.repeats,
-        }
-      : waterReminderTriggerFromIntervalHours(intervalHours);
+    const nextTriggerDates = await Promise.all(
+      matched.map(async (request) => {
+        const slot = timeOfDayFromDailyTrigger(request.trigger);
+        if (!slot) return null;
+        return Notifications.getNextTriggerDateAsync(waterReminderTriggerFromSlot(slot));
+      }),
+    );
+    const nextTriggerMs = nextTriggerDates
+      .filter((value): value is number => value != null)
+      .sort((a, b) => a - b)[0];
 
-    const next = await Notifications.getNextTriggerDateAsync(triggerForNext);
-    if (next == null) return { kind: 'inactive' };
-    return { kind: 'active', nextTriggerMs: next };
+    if (nextTriggerMs == null) return { kind: 'inactive' };
+    return { kind: 'active', nextTriggerMs };
   } catch {
     return { kind: 'inactive' };
   }
@@ -140,14 +171,10 @@ async function resolveWaterReminderUiState(
  */
 export async function getWaterReminderUiState(
   remindersEnabled: boolean,
-  intervalHours: number,
+  input: WaterReminderScheduleInput,
 ): Promise<WaterReminderUiState> {
-  const first = await resolveWaterReminderUiState(remindersEnabled, intervalHours);
-  if (
-    first.kind !== 'inactive' ||
-    !remindersEnabled ||
-    Platform.OS === 'web'
-  ) {
+  const first = await resolveWaterReminderUiState(remindersEnabled, input);
+  if (first.kind !== 'inactive' || !remindersEnabled || Platform.OS === 'web') {
     return first;
   }
   const Notifications = getNotificationsModule();
@@ -156,7 +183,7 @@ export async function getWaterReminderUiState(
   if (status !== 'granted') return first;
 
   await new Promise((r) => setTimeout(r, 280));
-  return resolveWaterReminderUiState(remindersEnabled, intervalHours);
+  return resolveWaterReminderUiState(remindersEnabled, input);
 }
 
 export async function ensureAndroidChannel(): Promise<void> {
@@ -183,43 +210,58 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 export async function cancelWaterReminders(): Promise<void> {
   const Notifications = getNativeNotificationsOrNull();
   if (!Notifications) return;
-  const id = await AsyncStorage.getItem(NOTIFICATION_ID_KEY);
-  if (id) {
-    await Notifications.cancelScheduledNotificationAsync(id);
-    await AsyncStorage.removeItem(NOTIFICATION_ID_KEY);
+
+  const ids = await readStoredNotificationIds();
+  await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id)));
+  if (ids.length > 0) {
+    await AsyncStorage.removeItem(NOTIFICATION_IDS_KEY);
+  }
+
+  const legacyId = await AsyncStorage.getItem(LEGACY_NOTIFICATION_ID_KEY);
+  if (legacyId) {
+    await Notifications.cancelScheduledNotificationAsync(legacyId);
+    await AsyncStorage.removeItem(LEGACY_NOTIFICATION_ID_KEY);
   }
 }
 
 /**
- * Schedules one repeating local notification. Cancels any previous water reminder schedule.
+ * Schedules one daily local notification per computed glass slot.
+ * Cancels any previous water reminder schedule first.
  */
-export async function scheduleWaterReminders(intervalHours: number): Promise<boolean> {
+export async function scheduleWaterReminders(input: WaterReminderScheduleInput): Promise<boolean> {
   const Notifications = getNativeNotificationsOrNull();
   if (!Notifications) return false;
+
+  const scheduleResult = buildGlassSchedule(input);
+  if (!scheduleResult.ok) return false;
+
   await cancelWaterReminders();
   const granted = await requestNotificationPermissions();
   if (!granted) return false;
 
-  const trigger = waterReminderTriggerFromIntervalHours(intervalHours);
-  const identifier = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: i18next.t('notifications.title'),
-      body: i18next.t('notifications.body'),
-    },
-    trigger,
-  });
-  await AsyncStorage.setItem(NOTIFICATION_ID_KEY, identifier);
+  const ids: string[] = [];
+  for (const slot of scheduleResult.schedule.slots) {
+    const identifier = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: i18next.t('notifications.title'),
+        body: i18next.t('notifications.body'),
+      },
+      trigger: waterReminderTriggerFromSlot(slot),
+    });
+    ids.push(identifier);
+  }
+
+  await AsyncStorage.setItem(NOTIFICATION_IDS_KEY, JSON.stringify(ids));
   return true;
 }
 
 /**
- * Applies reminder settings: schedules when enabled, cancels when disabled.
- * When reminders stay on with the same interval, leaves the existing schedule in place so
- * AsyncStorage id and OS state are not briefly cleared (which broke the home reminder line on restart).
+ * Applies reminder settings: schedules daily glass slots when enabled, cancels when disabled.
+ * When reminders stay on with the same slot timetable, leaves the existing schedule in place.
  */
 export async function syncWaterReminders(
   enabled: boolean,
-  intervalHours: number,
+  input: WaterReminderScheduleInput,
 ): Promise<void> {
   const Notifications = getNativeNotificationsOrNull();
   if (!Notifications) return;
@@ -228,15 +270,21 @@ export async function syncWaterReminders(
     return;
   }
 
-  const storedId = await AsyncStorage.getItem(NOTIFICATION_ID_KEY);
-  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  const match = storedId
-    ? scheduled.find((n) => n.identifier === storedId)
-    : undefined;
-
-  if (match && scheduledReminderMatchesInterval(match, intervalHours)) {
+  const scheduleResult = buildGlassSchedule(input);
+  if (!scheduleResult.ok) {
+    await cancelWaterReminders();
     return;
   }
 
-  await scheduleWaterReminders(intervalHours);
+  const storedIds = await readStoredNotificationIds();
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const matched = storedIds
+    .map((id) => scheduled.find((request) => request.identifier === id))
+    .filter((request): request is import('expo-notifications').NotificationRequest => request !== undefined);
+
+  if (scheduledGlassSlotsMatch(matched, scheduleResult.schedule.slots)) {
+    return;
+  }
+
+  await scheduleWaterReminders(input);
 }

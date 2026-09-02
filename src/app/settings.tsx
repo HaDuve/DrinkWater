@@ -25,6 +25,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PRIVACY_POLICY_URL } from "@/constants/urls";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
+import { TimeOfDayPicker } from "@/features/water/components/time-of-day-picker";
 import { useSettingsModel } from "@/features/water/hooks/use-settings-model";
 import { useTabBarBottomInset } from "@/hooks/use-tab-bar-bottom-inset";
 import { useTheme } from "@/hooks/use-theme";
@@ -41,6 +42,10 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const {
     loaded,
+    reminderWindow,
+    setWindowStart,
+    setWindowEnd,
+    preview,
     goalInput,
     setGoalInput,
     glassInput,
@@ -88,6 +93,21 @@ export default function SettingsScreen() {
           Alert.alert(
             t("settings.alertInvalidGlassTitle"),
             t("settings.alertInvalidGlassMessage"),
+          );
+        } else if (result.error === "end_before_or_equal_start") {
+          Alert.alert(
+            t("settings.alertInvalidWindowTitle"),
+            t("settings.alertInvalidWindowEndBeforeStart"),
+          );
+        } else if (result.error === "overnight_window") {
+          Alert.alert(
+            t("settings.alertInvalidWindowTitle"),
+            t("settings.alertInvalidWindowOvernight"),
+          );
+        } else if (result.error === "slots_too_close") {
+          Alert.alert(
+            t("settings.alertInvalidWindowTitle"),
+            t("settings.alertInvalidWindowSlotsTooClose"),
           );
         }
         return;
@@ -182,6 +202,38 @@ export default function SettingsScreen() {
             placeholderTextColor={theme.textSecondary}
           />
         </View>
+
+        {reminderWindow ? (
+          <>
+            <ThemedText type="small" themeColor="textSecondary">
+              {t("settings.reminderWindowHint")}
+            </ThemedText>
+
+            <TimeOfDayPicker
+              label={t("settings.reminderWindowStart")}
+              value={reminderWindow.start}
+              onChange={setWindowStart}
+            />
+
+            <TimeOfDayPicker
+              label={t("settings.reminderWindowEnd")}
+              value={reminderWindow.end}
+              onChange={setWindowEnd}
+            />
+
+            {preview ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                {preview.ok
+                  ? t("settings.reminderPlanPreview", {
+                      count: preview.glassCount,
+                      start: preview.windowStart,
+                      end: preview.windowEnd,
+                    })
+                  : t("settings.reminderPlanInvalid")}
+              </ThemedText>
+            ) : null}
+          </>
+        ) : null}
 
         <View style={styles.row}>
           <ThemedText type="smallBold">{t("settings.reminders")}</ThemedText>

@@ -41,6 +41,15 @@ export function formatTimeOfDay(time: TimeOfDay): string {
   return `${hour}:${minute}`;
 }
 
+export function parseTimeOfDayInput(raw: string): TimeOfDay | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(raw);
+  if (!match) return null;
+  const hour = Number.parseInt(match[1], 10);
+  const minute = Number.parseInt(match[2], 10);
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return { hour, minute };
+}
+
 function timeToMinutes(time: TimeOfDay): number {
   return time.hour * 60 + time.minute;
 }

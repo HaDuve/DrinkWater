@@ -20,10 +20,9 @@ export const en = {
     title: "Settings",
     dailyGoalMl: "Daily goal (ml)",
     glassSizeMl: "Glass size (ml)",
+    notifyTime: "Notify time",
     reminderWindowStart: "Reminder window start",
     reminderWindowEnd: "Reminder window end",
-    reminderWindowHint:
-      "Evenly spaced glass reminders between these times each day.",
     reminderPlanPreview:
       "{{count}} glasses between {{start}} and {{end}}",
     reminderPlanInvalid: "Adjust goal, glass size, or window to fit this plan.",

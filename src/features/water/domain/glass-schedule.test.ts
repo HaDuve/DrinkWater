@@ -1,4 +1,24 @@
-import { buildGlassSchedule, countDailyGlasses, type ReminderWindow } from './glass-schedule';
+import {
+  buildGlassSchedule,
+  countDailyGlasses,
+  parseTimeOfDayInput,
+  type ReminderWindow,
+} from './glass-schedule';
+
+describe('parseTimeOfDayInput', () => {
+  it('parses HH:MM strings into hour and minute', () => {
+    expect(parseTimeOfDayInput('08:30')).toEqual({ hour: 8, minute: 30 });
+    expect(parseTimeOfDayInput('17:00')).toEqual({ hour: 17, minute: 0 });
+  });
+
+  it('rejects invalid or out-of-range values', () => {
+    expect(parseTimeOfDayInput('8:30')).toBeNull();
+    expect(parseTimeOfDayInput('25:00')).toBeNull();
+    expect(parseTimeOfDayInput('12:60')).toBeNull();
+    expect(parseTimeOfDayInput('')).toBeNull();
+    expect(parseTimeOfDayInput('noon')).toBeNull();
+  });
+});
 
 describe('countDailyGlasses', () => {
   it('uses ceil(goalMl / glassMl) so slight over-plan is intentional', () => {

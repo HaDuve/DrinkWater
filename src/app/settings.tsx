@@ -1,4 +1,5 @@
 import { useFocusEffect } from "@react-navigation/native";
+import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -20,12 +21,21 @@ import {
 } from "react-native-safe-area-context";
 
 import { ScreenLoadingState } from "@/components/screen-loading-state";
+import { PrototypeSwitcher } from "@/components/prototype-switcher";
 import { ExternalLink } from "@/components/external-link";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PRIVACY_POLICY_URL } from "@/constants/urls";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
 import { ReminderWindowTimeInput } from "@/features/water/components/reminder-window-time-input";
+import {
+  PrototypeStatePanel,
+  TIME_PICKER_PROTOTYPE_VARIANTS,
+  VariantA,
+  VariantB,
+  VariantC,
+  type TimePickerPrototypeVariant,
+} from "@/features/water/components/prototype/time-picker-variants";
 import { resolveSettingsSaveAlert } from "@/features/water/hooks/settings-save-alert";
 import { useSettingsModel } from "@/features/water/hooks/use-settings-model";
 import { useTabBarBottomInset } from "@/hooks/use-tab-bar-bottom-inset";
@@ -38,6 +48,11 @@ const IOS_KAV_FINE_TUNE = 0;
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
+  const { picker } = useLocalSearchParams<{ picker?: string }>();
+  const pickerVariant = TIME_PICKER_PROTOTYPE_VARIANTS.find(
+    (variant) => variant.key === picker,
+  )?.key;
+  const isTimePickerPrototype = __DEV__ && pickerVariant != null;
   const tabBarBottomInset = useTabBarBottomInset();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
@@ -182,15 +197,55 @@ export default function SettingsScreen() {
 
         {reminderWindow ? (
           <>
-            <ReminderWindowTimeInput
-              label={t("settings.notifyTime")}
-              start={reminderWindow.start}
-              end={reminderWindow.end}
-              onStartChange={setWindowStart}
-              onEndChange={setWindowEnd}
-              startAccessibilityLabel={t("settings.reminderWindowStart")}
-              endAccessibilityLabel={t("settings.reminderWindowEnd")}
-            />
+            {isTimePickerPrototype ? (
+              <>
+                <ThemedText type="small" themeColor="textSecondary">
+                  PROTOTYPE — native time picker variants on Settings
+                </ThemedText>
+                {pickerVariant === "A" ? (
+                  <VariantA
+                    label={t("settings.notifyTime")}
+                    start={reminderWindow.start}
+                    end={reminderWindow.end}
+                    onStartChange={setWindowStart}
+                    onEndChange={setWindowEnd}
+                  />
+                ) : null}
+                {pickerVariant === "B" ? (
+                  <VariantB
+                    label={t("settings.notifyTime")}
+                    start={reminderWindow.start}
+                    end={reminderWindow.end}
+                    onStartChange={setWindowStart}
+                    onEndChange={setWindowEnd}
+                  />
+                ) : null}
+                {pickerVariant === "C" ? (
+                  <VariantC
+                    label={t("settings.notifyTime")}
+                    start={reminderWindow.start}
+                    end={reminderWindow.end}
+                    onStartChange={setWindowStart}
+                    onEndChange={setWindowEnd}
+                  />
+                ) : null}
+                <PrototypeStatePanel
+                  variant={pickerVariant as TimePickerPrototypeVariant}
+                  start={reminderWindow.start}
+                  end={reminderWindow.end}
+                />
+              </>
+            ) : (
+              <ReminderWindowTimeInput
+                label={t("settings.notifyTime")}
+                start={reminderWindow.start}
+                end={reminderWindow.end}
+                onStartChange={setWindowStart}
+                onEndChange={setWindowEnd}
+                startAccessibilityLabel={t("settings.reminderWindowStart")}
+                endAccessibilityLabel={t("settings.reminderWindowEnd")}
+              />
+            )}
 
             {preview ? (
               <ThemedText type="small" themeColor="textSecondary">
@@ -247,6 +302,12 @@ export default function SettingsScreen() {
           {footer}
         </KeyboardAvoidingView>
       </SafeAreaView>
+      {isTimePickerPrototype ? (
+        <PrototypeSwitcher
+          paramName="picker"
+          variants={[...TIME_PICKER_PROTOTYPE_VARIANTS]}
+        />
+      ) : null}
     </ThemedView>
   );
 }

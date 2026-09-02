@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 
 import type { ReminderWindow } from '@/features/water/domain/glass-schedule';
-import { LEGACY_NOTIFICATION_INTERVAL_HOURS, syncWaterReminders } from '@/lib/notifications';
+import { syncWaterReminders } from '@/lib/notifications';
 import {
   loadWaterState,
   saveGlassMl,
@@ -38,11 +38,17 @@ export function useSettingsModel() {
     await saveGoalMl(goal);
     await saveGlassMl(glass);
     await saveRemindersEnabled(reminders);
-    await syncWaterReminders(reminders, LEGACY_NOTIFICATION_INTERVAL_HOURS);
+    const window =
+      loaded?.reminderWindow ?? (await loadWaterState()).reminderWindow;
+    await syncWaterReminders(reminders, {
+      goalMl: goal,
+      glassMl: glass,
+      window,
+    });
     refresh();
 
     return { ok: true, notificationsHint: reminders && Platform.OS !== 'web' };
-  }, [goalInput, glassInput, reminders, refresh]);
+  }, [goalInput, glassInput, reminders, loaded, refresh]);
 
   const reminderWindow: ReminderWindow | null = loaded?.reminderWindow ?? null;
 

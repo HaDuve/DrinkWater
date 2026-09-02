@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   buildGlassSchedule,
   formatTimeOfDay,
+  parseTimeOfDayInput,
   type GlassScheduleError,
   type ReminderWindow,
   type TimeOfDay,
@@ -124,15 +125,7 @@ async function upsertHistoryForDate(date: string, intakeMl: number): Promise<voi
 
 function parseTimeOfDayFromStorage(value: string | null): TimeOfDay | null {
   if (!value) return null;
-  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
-  if (!match) return null;
-
-  const hour = Number.parseInt(match[1], 10);
-  const minute = Number.parseInt(match[2], 10);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-
-  return { hour, minute };
+  return parseTimeOfDayInput(value);
 }
 
 function readStoredReminderWindow(raw: {

@@ -6,6 +6,8 @@ import { Spacing } from '@/constants/theme';
 import {
   formatTimeOfDay,
   parseTimeOfDayInput,
+  resolveTimeOfDayTextChange,
+  resolveTimeOfDayTextOnBlur,
   type TimeOfDay,
 } from '@/features/water/domain/glass-schedule';
 import { useTheme } from '@/hooks/use-theme';
@@ -24,20 +26,26 @@ function TimeInput({ value, onChange, accessibilityLabel }: TimeInputProps) {
     setText(formatTimeOfDay(value));
   }, [value]);
 
-  const commit = () => {
-    const parsed = parseTimeOfDayInput(text);
-    if (parsed) {
-      onChange(parsed);
-      setText(formatTimeOfDay(parsed));
-      return;
+  const handleChangeText = (nextText: string) => {
+    const result = resolveTimeOfDayTextChange(nextText);
+    setText(result.displayText);
+    if ('notifyParent' in result) {
+      onChange(result.notifyParent);
     }
-    setText(formatTimeOfDay(value));
+  };
+
+  const commit = () => {
+    const result = resolveTimeOfDayTextOnBlur(text, value);
+    setText(result.displayText);
+    if (result.notifyParent) {
+      onChange(result.notifyParent);
+    }
   };
 
   return (
     <TextInput
       value={text}
-      onChangeText={setText}
+      onChangeText={handleChangeText}
       onBlur={commit}
       onSubmitEditing={commit}
       keyboardType="numbers-and-punctuation"

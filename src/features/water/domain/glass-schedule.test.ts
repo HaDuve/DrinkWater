@@ -2,6 +2,8 @@ import {
   buildGlassSchedule,
   countDailyGlasses,
   parseTimeOfDayInput,
+  resolveTimeOfDayTextChange,
+  resolveTimeOfDayTextOnBlur,
   type ReminderWindow,
 } from './glass-schedule';
 
@@ -12,11 +14,40 @@ describe('parseTimeOfDayInput', () => {
   });
 
   it('rejects invalid or out-of-range values', () => {
-    expect(parseTimeOfDayInput('8:30')).toBeNull();
     expect(parseTimeOfDayInput('25:00')).toBeNull();
     expect(parseTimeOfDayInput('12:60')).toBeNull();
     expect(parseTimeOfDayInput('')).toBeNull();
     expect(parseTimeOfDayInput('noon')).toBeNull();
+  });
+
+  it('accepts single-digit hours for stored values', () => {
+    expect(parseTimeOfDayInput('8:30')).toEqual({ hour: 8, minute: 30 });
+    expect(parseTimeOfDayInput(' 09:00 ')).toEqual({ hour: 9, minute: 0 });
+  });
+});
+
+describe('resolveTimeOfDayTextChange', () => {
+  it('notifies the parent as soon as the text is a valid time', () => {
+    expect(resolveTimeOfDayTextChange('09:00')).toEqual({
+      notifyParent: { hour: 9, minute: 0 },
+      displayText: '09:00',
+    });
+  });
+
+  it('keeps partial input as a draft without notifying the parent', () => {
+    expect(resolveTimeOfDayTextChange('09:0')).toEqual({
+      displayText: '09:0',
+    });
+  });
+});
+
+describe('resolveTimeOfDayTextOnBlur', () => {
+  it('reverts invalid text to the last committed value', () => {
+    const fallback = { hour: 8, minute: 30 };
+    expect(resolveTimeOfDayTextOnBlur('bad', fallback)).toEqual({
+      notifyParent: null,
+      displayText: '08:30',
+    });
   });
 });
 

@@ -188,7 +188,7 @@ describe('syncWaterReminders', () => {
     expect(mockCancelScheduledNotificationAsync).not.toHaveBeenCalled();
   });
 
-  it('does not depend on intake — static timetable when goal changes', async () => {
+  it('skips reschedule when the OS timetable already matches the input', async () => {
     await syncWaterReminders(true, defaultScheduleInput);
     mockScheduleNotificationAsync.mockClear();
     mockCancelScheduledNotificationAsync.mockClear();
@@ -207,6 +207,36 @@ describe('syncWaterReminders', () => {
     await syncWaterReminders(true, defaultScheduleInput);
 
     expect(mockScheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  it('reschedules when goal changes the slot count', async () => {
+    await syncWaterReminders(true, defaultScheduleInput);
+    mockScheduleNotificationAsync.mockClear();
+    mockCancelScheduledNotificationAsync.mockClear();
+
+    mockGetAllScheduledNotificationsAsync.mockResolvedValue(
+      expectedDefaultSlots.map((slot, index) => ({
+        identifier: `id-${index + 1}`,
+        trigger: { type: 'daily', hour: slot.hour, minute: slot.minute },
+      })),
+    );
+    await AsyncStorage.setItem(
+      '@water_reminder_notification_ids',
+      JSON.stringify(expectedDefaultSlots.map((_, index) => `id-${index + 1}`)),
+    );
+
+    await syncWaterReminders(true, {
+      goalMl: 500,
+      glassMl: 250,
+      window: defaultWindow,
+    });
+
+    expect(mockCancelScheduledNotificationAsync).toHaveBeenCalledTimes(8);
+    expect(mockScheduleNotificationAsync).toHaveBeenCalledTimes(2);
+    expect(mockScheduleNotificationAsync.mock.calls.map(([request]) => request.trigger)).toEqual([
+      { type: 'daily', hour: 8, minute: 30 },
+      { type: 'daily', hour: 17, minute: 0 },
+    ]);
   });
 });
 

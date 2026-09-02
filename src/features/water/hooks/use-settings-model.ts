@@ -38,16 +38,17 @@ export function useSettingsModel() {
     await saveGoalMl(goal);
     await saveGlassMl(glass);
     await saveRemindersEnabled(reminders);
-    const state = await loadWaterState();
+    const window =
+      loaded?.reminderWindow ?? (await loadWaterState()).reminderWindow;
     await syncWaterReminders(reminders, {
-      goalMl: state.goalMl,
-      glassMl: state.glassMl,
-      window: state.reminderWindow,
+      goalMl: goal,
+      glassMl: glass,
+      window,
     });
     refresh();
 
     return { ok: true, notificationsHint: reminders && Platform.OS !== 'web' };
-  }, [goalInput, glassInput, reminders, refresh]);
+  }, [goalInput, glassInput, reminders, loaded, refresh]);
 
   const reminderWindow: ReminderWindow | null = loaded?.reminderWindow ?? null;
 

@@ -80,7 +80,7 @@ function buildEvenSlots(window: ReminderWindow, glassCount: number): TimeOfDay[]
   const endMinutes = timeToMinutes(window.end);
 
   if (glassCount === 1) {
-    return [minutesToTime((startMinutes + endMinutes) / 2)];
+    return [window.end];
   }
 
   const span = endMinutes - startMinutes;

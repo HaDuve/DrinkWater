@@ -110,7 +110,7 @@ describe('buildGlassSchedule', () => {
     expect(result.schedule.slots.at(-1)).toEqual(window.end);
   });
 
-  it('places the only glass at the window midpoint when count is 1', () => {
+  it('places the only glass at Reminder Window end when count is 1', () => {
     const result = buildGlassSchedule({
       goalMl: 100,
       glassMl: 250,
@@ -121,7 +121,7 @@ describe('buildGlassSchedule', () => {
       ok: true,
       schedule: {
         glassCount: 1,
-        slots: [{ hour: 12, minute: 45 }],
+        slots: [{ hour: 17, minute: 0 }],
       },
     });
   });

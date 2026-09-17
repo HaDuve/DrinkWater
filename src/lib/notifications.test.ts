@@ -35,6 +35,7 @@ const mockSetNotificationChannelAsync = jest.fn();
 jest.mock('expo-notifications', () => ({
   SchedulableTriggerInputTypes: {
     DAILY: 'daily',
+    DATE: 'date',
     TIME_INTERVAL: 'timeInterval',
   },
   AndroidImportance: { DEFAULT: 3 },
@@ -128,22 +129,30 @@ describe('scheduledGlassSlotsMatch', () => {
 });
 
 describe('syncWaterReminders', () => {
-  it('schedules one daily notification per computed glass slot', async () => {
+  it('queues today and tomorrow Default Plans as dated one-shots', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 2, 7, 0, 0));
+
     await syncWaterReminders(true, defaultScheduleInput);
 
-    expect(mockScheduleNotificationAsync).toHaveBeenCalledTimes(8);
-    expect(mockScheduleNotificationAsync.mock.calls.map(([request]) => request.trigger)).toEqual(
-      expectedDefaultSlots.map((slot) => ({
-        type: 'daily',
-        hour: slot.hour,
-        minute: slot.minute,
+    expect(mockScheduleNotificationAsync).toHaveBeenCalledTimes(16);
+    expect(mockScheduleNotificationAsync.mock.calls.map(([request]) => request.trigger)).toEqual([
+      ...expectedDefaultSlots.map((slot) => ({
+        type: 'date',
+        date: new Date(2026, 8, 2, slot.hour, slot.minute, 0, 0),
       })),
-    );
+      ...expectedDefaultSlots.map((slot) => ({
+        type: 'date',
+        date: new Date(2026, 8, 3, slot.hour, slot.minute, 0, 0),
+      })),
+    ]);
 
     const storedIds = JSON.parse(
       (await AsyncStorage.getItem('@water_reminder_notification_ids')) ?? '[]',
     ) as string[];
-    expect(storedIds).toHaveLength(8);
+    expect(storedIds).toHaveLength(16);
+
+    jest.useRealTimers();
   });
 
   it('cancels previous reminder ids before rescheduling', async () => {

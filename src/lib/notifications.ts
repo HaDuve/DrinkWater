@@ -58,17 +58,31 @@ function sortTimeOfDaySlots(slots: TimeOfDay[]): TimeOfDay[] {
   return [...slots].sort((a, b) => timeOfDaySortKey(a) - timeOfDaySortKey(b));
 }
 
-export function timeOfDayFromDailyTrigger(
-  trigger: import('expo-notifications').NotificationTrigger,
-): TimeOfDay | null {
-  if (trigger === null || typeof trigger !== 'object') return null;
-  if (!('hour' in trigger) || !('minute' in trigger)) return null;
+function readHourMinute(value: unknown): TimeOfDay | null {
+  if (value === null || typeof value !== 'object') return null;
+  if (!('hour' in value) || !('minute' in value)) return null;
 
-  const hour = (trigger as { hour: unknown }).hour;
-  const minute = (trigger as { minute: unknown }).minute;
+  const hour = (value as { hour: unknown }).hour;
+  const minute = (value as { minute: unknown }).minute;
   if (typeof hour !== 'number' || typeof minute !== 'number') return null;
 
   return { hour, minute };
+}
+
+/**
+ * Reads slot time from a scheduled trigger.
+ * Android daily triggers expose hour/minute at the top level; iOS serializes the
+ * same schedule as a calendar trigger with nested dateComponents.
+ */
+export function timeOfDayFromDailyTrigger(
+  trigger: import('expo-notifications').NotificationTrigger,
+): TimeOfDay | null {
+  const topLevel = readHourMinute(trigger);
+  if (topLevel) return topLevel;
+
+  if (trigger === null || typeof trigger !== 'object') return null;
+  if (!('dateComponents' in trigger)) return null;
+  return readHourMinute((trigger as { dateComponents: unknown }).dateComponents);
 }
 
 export function scheduledGlassSlotsMatch(

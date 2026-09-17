@@ -103,6 +103,23 @@ describe('scheduledGlassSlotsMatch', () => {
     expect(scheduledGlassSlotsMatch(scheduled, expectedDefaultSlots)).toBe(true);
   });
 
+  it('returns true when iOS calendar triggers match expected slots via dateComponents', () => {
+    const scheduled = expectedDefaultSlots.map((slot) => ({
+      trigger: {
+        type: 'calendar',
+        repeats: true,
+        dateComponents: {
+          hour: slot.hour,
+          minute: slot.minute,
+          isLeapMonth: false,
+          isRepeatedDay: false,
+        },
+      },
+    }));
+
+    expect(scheduledGlassSlotsMatch(scheduled, expectedDefaultSlots)).toBe(true);
+  });
+
   it('returns false when slot count or times differ', () => {
     const scheduled = [{ trigger: { type: 'daily', hour: 8, minute: 30 } }];
 
@@ -262,6 +279,45 @@ describe('getWaterReminderUiState', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('stays active after save when iOS returns calendar triggers (nested dateComponents)', async () => {
+    // Repro: schedule succeeds, then home reads OS schedule. On iOS, daily
+    // triggers are serialized as calendar + dateComponents — not top-level hour/minute.
+    await syncWaterReminders(true, defaultScheduleInput);
+
+    const storedIds = JSON.parse(
+      (await AsyncStorage.getItem('@water_reminder_notification_ids')) ?? '[]',
+    ) as string[];
+    expect(storedIds).toHaveLength(8);
+
+    mockGetAllScheduledNotificationsAsync.mockResolvedValue(
+      expectedDefaultSlots.map((slot, index) => ({
+        identifier: storedIds[index],
+        trigger: {
+          type: 'calendar',
+          repeats: true,
+          dateComponents: {
+            hour: slot.hour,
+            minute: slot.minute,
+            isLeapMonth: false,
+            isRepeatedDay: false,
+          },
+        },
+      })),
+    );
+    mockGetNextTriggerDateAsync.mockResolvedValue(Date.now() + 90 * 60_000);
+
+    const statePromise = getWaterReminderUiState(true, defaultScheduleInput);
+    await jest.advanceTimersByTimeAsync(280);
+    const state = await statePromise;
+
+    // User symptom: home shows "Keine Erinnerung geplant" (inactive) after save.
+    expect(state.kind).toBe('active');
+    if (state.kind === 'active') {
+      expect(state.nextSlot).toEqual({ hour: 8, minute: 30 });
+      expect(state.slotDay).toBe('today');
+    }
   });
 
   it('returns the next domain slot and matching trigger time for display', async () => {

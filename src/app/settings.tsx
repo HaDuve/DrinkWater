@@ -195,11 +195,18 @@ export default function SettingsScreen() {
             {preview ? (
               <ThemedText type="small" themeColor="textSecondary">
                 {preview.ok
-                  ? t("settings.reminderPlanPreview", {
-                      count: preview.glassCount,
-                      start: preview.windowStart,
-                      end: preview.windowEnd,
-                    })
+                  ? preview.intervalMinutes != null
+                    ? t("settings.reminderPlanPreview", {
+                        count: preview.glassCount,
+                        start: preview.windowStart,
+                        end: preview.windowEnd,
+                        interval: preview.intervalMinutes,
+                      })
+                    : t("settings.reminderPlanPreviewSingle", {
+                        count: preview.glassCount,
+                        start: preview.windowStart,
+                        end: preview.windowEnd,
+                      })
                   : t("settings.reminderPlanInvalid")}
               </ThemedText>
             ) : null}

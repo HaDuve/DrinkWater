@@ -1,5 +1,5 @@
 import { Link } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -19,22 +19,10 @@ type Props = {
 export function WaterReminderInfo({ status }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    if (status.kind !== 'active') return;
-    const id = setInterval(() => setTick((tick) => tick + 1), 30_000);
-    return () => clearInterval(id);
-  }, [status.kind]);
 
   const reminderBody =
     status.kind === 'active'
-      ? buildNextGlassReminderBody(
-          status.nextSlot,
-          status.slotDay,
-          status.nextTriggerMs - Date.now(),
-          t,
-        )
+      ? buildNextGlassReminderBody(status.nextSlot, status.slotDay, t)
       : null;
 
   const expectingNext = status.kind === 'active';

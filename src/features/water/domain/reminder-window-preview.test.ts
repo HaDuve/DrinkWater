@@ -13,11 +13,31 @@ const defaultInput: ReminderWindowPreviewInput = {
 };
 
 describe('buildReminderWindowPreview', () => {
-  it('summarizes glass count and same-day window range for a valid plan', () => {
+  it('summarizes glass count, interval, and same-day window range for a valid plan', () => {
     expect(buildReminderWindowPreview(defaultInput)).toEqual({
       ok: true,
       glassCount: 8,
+      intervalMinutes: 73,
       windowStart: '08:30',
+      windowEnd: '17:00',
+    });
+  });
+
+  it('omits interval when the plan has a single glass', () => {
+    expect(
+      buildReminderWindowPreview({
+        goalMl: 250,
+        glassMl: 250,
+        window: {
+          start: { hour: 8, minute: 0 },
+          end: { hour: 17, minute: 0 },
+        },
+      }),
+    ).toEqual({
+      ok: true,
+      glassCount: 1,
+      intervalMinutes: null,
+      windowStart: '08:00',
       windowEnd: '17:00',
     });
   });

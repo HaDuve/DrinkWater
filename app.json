@@ -2,7 +2,7 @@
   "expo": {
     "name": "DrinkWater",
     "slug": "DrinkWater",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "runtimeVersion": {
       "policy": "appVersion"
     },

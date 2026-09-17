@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Bumps app version (semver) in package.json, app.json (expo.version), and package-lock.json root.
- * Usage: npm run version:bump [-- patch|minor|major]
+ * Bumps app version (semver) in package.json, app.json, package-lock.json, and store.config.json.
+ * Usage:
+ *   npm run version:bump [-- patch|minor|major]
+ *   require("./version-bump").bumpVersion("patch")
  */
 
 const fs = require("fs");
@@ -37,17 +39,25 @@ function writeJson(filePath, data) {
   fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
-function main() {
-  const arg = process.argv[2];
-  const release = arg && RELEASES.has(arg) ? arg : "patch";
-  if (arg && !RELEASES.has(arg)) {
-    console.error(`Unknown release "${arg}". Use: patch | minor | major`);
-    process.exit(1);
+function parseReleaseArg(arg) {
+  if (!arg) return "patch";
+  if (!RELEASES.has(arg)) {
+    throw new Error(`Unknown release "${arg}". Use: patch | minor | major`);
   }
+  return arg;
+}
+
+/**
+ * @param {"patch"|"minor"|"major"} [release]
+ * @returns {{ current: string, next: string, release: string }}
+ */
+function bumpVersion(release = "patch") {
+  const kind = parseReleaseArg(release);
 
   const pkgPath = path.join(root, "package.json");
   const appPath = path.join(root, "app.json");
   const lockPath = path.join(root, "package-lock.json");
+  const storePath = path.join(root, "store.config.json");
 
   const pkg = readJson(pkgPath);
   const current = pkg.version;
@@ -55,7 +65,7 @@ function main() {
     throw new Error("package.json has no version field");
   }
 
-  const next = bumpSemver(current, release);
+  const next = bumpSemver(current, kind);
   pkg.version = next;
   writeJson(pkgPath, pkg);
 
@@ -75,12 +85,29 @@ function main() {
     writeJson(lockPath, lock);
   }
 
-  console.log(`Version ${current} → ${next} (${release})`);
+  if (fs.existsSync(storePath)) {
+    const store = readJson(storePath);
+    if (store.apple) {
+      store.apple.version = next;
+      writeJson(storePath, store);
+    }
+  }
+
+  console.log(`Version ${current} → ${next} (${kind})`);
+  return { current, next, release: kind };
 }
 
-try {
-  main();
-} catch (e) {
-  console.error(e.message || e);
-  process.exit(1);
+function main() {
+  bumpVersion(parseReleaseArg(process.argv[2]));
+}
+
+module.exports = { bumpVersion, parseReleaseArg, RELEASES };
+
+if (require.main === module) {
+  try {
+    main();
+  } catch (e) {
+    console.error(e.message || e);
+    process.exit(1);
+  }
 }

@@ -26,7 +26,9 @@ export const de: TranslationResources = {
     reminderWindowStart: "Erinnerungsfenster Start",
     reminderWindowEnd: "Erinnerungsfenster Ende",
     reminderPlanPreview:
-      "{{count}} Gläser zwischen {{start}} und {{end}}",
+      "{{count}} Gläser zwischen {{start}} und {{end}} · alle {{interval}} Min.",
+    reminderPlanPreviewSingle:
+      "{{count}} Glas zwischen {{start}} und {{end}}",
     reminderPlanInvalid:
       "Passe Ziel, Glasmenge oder Fenster an, damit der Plan passt.",
     reminders: "Erinnerungen",
@@ -89,18 +91,13 @@ export const de: TranslationResources = {
     appOff: "Erinnerungen aus.",
     noPermission: "Benachrichtigungen deaktiviert.",
     inactive: "Keine Erinnerung geplant.",
-    nextAtToday: "Nächste Erinnerung um {{clockTime}} in {{time}}.",
-    doneForToday: "Heutige Erinnerungen erledigt. Nächste um {{clockTime}} in {{time}}.",
+    nextAtToday: "Nächste Erinnerung um {{clockTime}}.",
+    doneForToday: "Heutige Erinnerungen erledigt. Nächste um {{clockTime}}.",
     linkSettings: "Einstellungen",
     linkTurnOn: "In Einstellungen aktivieren",
     linkSetup: "In Einstellungen einrichten",
     a11yScheduled: "Erinnerung geplant",
     a11yNotScheduled: "Keine Erinnerung geplant",
-    timeSoon: "bald",
-    timeLessThanMinute: "weniger als 1 Min.",
-    timeMinutes: "{{count}} Min.",
-    timeHoursWhole: "{{count}} Std.",
-    timeHoursDecimal: "{{hours}} Std.",
   },
   notifications: {
     channelName: "Wasser-Erinnerungen",

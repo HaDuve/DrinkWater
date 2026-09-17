@@ -25,6 +25,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PRIVACY_POLICY_URL } from "@/constants/urls";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
+import { formatTodayRemainingPreviewBody } from "@/features/water/components/next-glass-reminder-copy";
 import { ReminderWindowTimeInput } from "@/features/water/components/reminder-window-time-input";
 import { resolveSettingsSaveAlert } from "@/features/water/hooks/settings-save-alert";
 import { useSettingsModel } from "@/features/water/hooks/use-settings-model";
@@ -47,6 +48,7 @@ export default function SettingsScreen() {
     setWindowStart,
     setWindowEnd,
     preview,
+    todayPreview,
     goalInput,
     setGoalInput,
     glassInput,
@@ -215,6 +217,17 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {todayPreview && todayPreview.kind !== "hidden" ? (
+          <View style={styles.todaySection}>
+            <ThemedText type="smallBold">
+              {t("settings.todaySectionTitle")}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {formatTodayRemainingPreviewBody(todayPreview, t)}
+            </ThemedText>
+          </View>
+        ) : null}
+
         <View style={styles.legalSection}>
           <ExternalLink href={PRIVACY_POLICY_URL}>
             <ThemedText type="linkPrimary">{t("settings.privacyPolicy")}</ThemedText>
@@ -303,6 +316,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: Spacing.two,
+  },
+  todaySection: {
+    gap: Spacing.one,
   },
   legalSection: {
     paddingTop: Spacing.two,

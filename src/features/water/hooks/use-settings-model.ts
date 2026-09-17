@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import type { ReminderWindow, TimeOfDay } from '@/features/water/domain/glass-schedule';
 import { buildReminderWindowPreview } from '@/features/water/domain/reminder-window-preview';
+import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { loadWaterState, type WaterSettings } from '@/lib/storage';
 
 import {
@@ -63,6 +64,22 @@ export function useSettingsModel() {
     });
   }, [goalInput, glassInput, reminderWindow]);
 
+  const todayPreview = useMemo(() => {
+    if (!reminderWindow || !loaded) return null;
+
+    const goalMl = Number.parseInt(goalInput, 10);
+    const glassMl = Number.parseInt(glassInput, 10);
+    if (!Number.isFinite(goalMl) || !Number.isFinite(glassMl)) return null;
+
+    return buildTodayRemainingPreview({
+      goalMl,
+      glassMl,
+      intakeMl: loaded.intakeMl,
+      window: reminderWindow,
+      now: new Date(),
+    });
+  }, [goalInput, glassInput, reminderWindow, loaded]);
+
   const save = useCallback(async (): Promise<SettingsSaveResult> => {
     if (!reminderWindow) {
       return { ok: false, error: 'settings_not_ready' };
@@ -88,6 +105,7 @@ export function useSettingsModel() {
     setWindowStart,
     setWindowEnd,
     preview,
+    todayPreview,
     goalInput,
     setGoalInput,
     glassInput,

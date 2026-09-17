@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 
 import { formatTimeOfDay, type TimeOfDay } from '@/features/water/domain/glass-schedule';
+import type { TodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 
 export function formatRelativeReminderTime(msFromNow: number, t: TFunction): string {
   if (!Number.isFinite(msFromNow) || msFromNow <= 0) return t('reminder.timeSoon');
@@ -28,4 +29,54 @@ export function buildNextGlassReminderBody(
   }
 
   return t('reminder.doneForToday', { clockTime, time });
+}
+
+export type TodayRemainingCopyPreview =
+  | Extract<TodayRemainingPreview, { kind: 'active' }>
+  | Extract<TodayRemainingPreview, { kind: 'silent' }>;
+
+export function formatTodayRemainingPreviewBody(
+  preview: TodayRemainingCopyPreview,
+  t: TFunction,
+): string {
+  if (preview.kind === 'silent') {
+    return t('settings.todayRemainingSilent');
+  }
+
+  return t('settings.todayRemainingPreview', {
+    count: preview.remainingGlasses,
+    start: preview.windowStart,
+    end: preview.windowEnd,
+    clockTime: preview.nextClockTime,
+  });
+}
+
+export type RemainingAwareHomePreview =
+  | {
+      kind: 'active';
+      remainingGlasses: number;
+      nextClockTime: string;
+    }
+  | { kind: 'silent' };
+
+export function buildRemainingAwareReminderBody(
+  preview: RemainingAwareHomePreview,
+  msFromNow: number,
+  t: TFunction,
+  nextSlot?: { clockTime: string },
+): string {
+  const time = formatRelativeReminderTime(msFromNow, t);
+
+  if (preview.kind === 'active') {
+    return t('reminder.remainingNextAt', {
+      count: preview.remainingGlasses,
+      clockTime: preview.nextClockTime,
+      time,
+    });
+  }
+
+  return t('reminder.remainingSilentNext', {
+    clockTime: nextSlot?.clockTime ?? '',
+    time,
+  });
 }

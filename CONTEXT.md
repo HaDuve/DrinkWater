@@ -42,3 +42,6 @@ _Avoid_: dynamic notifications, live schedule
 
 **Pacing Event**:
 Logging or undoing a Glass, changing goal / glass size / Reminder Window / reminders on-off, or starting a new calendar day. Opening the app is not a Pacing Event.
+
+**Today Differs**:
+Today's Remaining Plan is not the same as the Default Plan: fewer Remaining Glasses, a later Remaining Window start, or no Remaining Plan left (goal hit or past window end). Before Reminder Window start with zero Intake, Today does not differ.

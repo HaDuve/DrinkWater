@@ -43,42 +43,46 @@ export function formatTodayRemainingPreviewBody(
     return t('settings.todayRemainingSilent');
   }
 
-  return t('settings.todayRemainingPreview', {
+  const params = {
     count: preview.remainingGlasses,
-    start: preview.windowStart,
-    end: preview.windowEnd,
+    intervalMinutes: preview.intervalMinutes,
     clockTime: preview.nextClockTime,
-  });
+  };
+  if (preview.remainingGlasses === 1) {
+    return t('settings.todayRemainingPreviewOne', params);
+  }
+  return t('settings.todayRemainingPreviewOther', params);
 }
 
 export type RemainingAwareHomePreview =
   | {
       kind: 'active';
       remainingGlasses: number;
+      intervalMinutes: number;
       nextClockTime: string;
     }
   | { kind: 'silent' };
 
 export function buildRemainingAwareReminderBody(
   preview: RemainingAwareHomePreview,
-  msFromNow: number,
   t: TFunction,
-  nextSlot?: { clockTime: string },
+  nextSlot?: { clockTime: string; msFromNow: number },
 ): string {
-  const time = formatRelativeReminderTime(msFromNow, t);
-
   if (preview.kind === 'active') {
-    return t('reminder.remainingNextAt', {
+    const params = {
       count: preview.remainingGlasses,
+      intervalMinutes: preview.intervalMinutes,
       clockTime: preview.nextClockTime,
-      time,
-    });
+    };
+    if (preview.remainingGlasses === 1) {
+      return t('reminder.remainingNextAtOne', params);
+    }
+    return t('reminder.remainingNextAtOther', params);
   }
 
-  return t('reminder.remainingSilentNext', {
-    clockTime: nextSlot?.clockTime ?? '',
-    time,
-  });
+  const clockTime = nextSlot?.clockTime ?? '';
+  const time = formatRelativeReminderTime(nextSlot?.msFromNow ?? 0, t);
+  return t('reminder.remainingSilentNext', { clockTime, time });
 }
 
 export function buildHomeReminderBody(
@@ -95,16 +99,17 @@ export function buildHomeReminderBody(
       {
         kind: 'active',
         remainingGlasses: todayPreview.remainingGlasses,
+        intervalMinutes: todayPreview.intervalMinutes,
         nextClockTime: clockTime,
       },
-      msFromNow,
       t,
     );
   }
 
   if (todayPreview?.kind === 'silent') {
-    return buildRemainingAwareReminderBody({ kind: 'silent' }, msFromNow, t, {
+    return buildRemainingAwareReminderBody({ kind: 'silent' }, t, {
       clockTime,
+      msFromNow,
     });
   }
 

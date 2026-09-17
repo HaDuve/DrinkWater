@@ -27,8 +27,10 @@ export const en = {
       "{{count}} glasses between {{start}} and {{end}}",
     reminderPlanInvalid: "Adjust goal, glass size, or window to fit this plan.",
     todaySectionTitle: "Today",
-    todayRemainingPreview:
-      "{{count}} glasses left · {{start}}–{{end}} · next {{clockTime}}",
+    todayRemainingPreviewOne:
+      "{{count}} glass left – every {{intervalMinutes}} minutes\nnext reminder at {{clockTime}}",
+    todayRemainingPreviewOther:
+      "{{count}} glasses left – every {{intervalMinutes}} minutes\nnext reminder at {{clockTime}}",
     todayRemainingSilent: "No more reminders today.",
     reminders: "Reminders",
     save: "Save settings",
@@ -91,8 +93,10 @@ export const en = {
     inactive: "Reminder not scheduled.",
     nextAtToday: "Next reminder at {{clockTime}} in {{time}}.",
     doneForToday: "Today's reminders done. Next at {{clockTime}} in {{time}}.",
-    remainingNextAt:
-      "{{count}} glasses left · next at {{clockTime}} in {{time}}.",
+    remainingNextAtOne:
+      "{{count}} glass left – every {{intervalMinutes}} minutes\nnext reminder at {{clockTime}}",
+    remainingNextAtOther:
+      "{{count}} glasses left – every {{intervalMinutes}} minutes\nnext reminder at {{clockTime}}",
     remainingSilentNext:
       "No more reminders today. Next at {{clockTime}} in {{time}}.",
     linkSettings: "Settings",

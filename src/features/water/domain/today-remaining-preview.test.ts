@@ -18,7 +18,7 @@ describe('buildTodayRemainingPreview', () => {
     ).toEqual({ kind: 'hidden' });
   });
 
-  it('shows Remaining Glasses, Remaining Window, and next clock when Today Differs', () => {
+  it('shows Remaining Glasses, interval minutes, and next clock when Today Differs', () => {
     expect(
       buildTodayRemainingPreview({
         goalMl: 1000,
@@ -30,9 +30,28 @@ describe('buildTodayRemainingPreview', () => {
     ).toEqual({
       kind: 'active',
       remainingGlasses: 4,
-      windowStart: '10:01',
-      windowEnd: '17:00',
+      intervalMinutes: 105,
       nextClockTime: '11:46',
+    });
+  });
+
+  it('uses Remaining Window span as interval when one Glass remains', () => {
+    expect(
+      buildTodayRemainingPreview({
+        goalMl: 500,
+        glassMl: 250,
+        intakeMl: 250,
+        window: {
+          start: { hour: 8, minute: 0 },
+          end: { hour: 17, minute: 0 },
+        },
+        now: new Date(2026, 8, 2, 16, 20, 0),
+      }),
+    ).toEqual({
+      kind: 'active',
+      remainingGlasses: 1,
+      intervalMinutes: 40,
+      nextClockTime: '17:00',
     });
   });
 
@@ -72,8 +91,7 @@ describe('buildTodayRemainingPreview', () => {
     ).toEqual({
       kind: 'active',
       remainingGlasses: 3,
-      windowStart: '08:30',
-      windowEnd: '17:00',
+      intervalMinutes: 255,
       nextClockTime: '08:30',
     });
   });

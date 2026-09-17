@@ -1,5 +1,6 @@
 import {
   countDailyGlasses,
+  dateToTimeOfDay,
   formatTimeOfDay,
   type ReminderWindow,
   type TimeOfDay,
@@ -23,14 +24,27 @@ export type TodayRemainingPreview =
   | {
       kind: 'active';
       remainingGlasses: number;
-      windowStart: string;
-      windowEnd: string;
+      intervalMinutes: number;
       nextClockTime: string;
     }
   | { kind: 'silent' };
 
 function timeToMinutes(time: TimeOfDay): number {
   return time.hour * 60 + time.minute;
+}
+
+/** Minutes between Remaining Plan pings; single-glass days use wait until that ping. */
+export function buildRemainingPlanIntervalMinutes(
+  slots: TimeOfDay[],
+  now: Date,
+): number {
+  if (slots.length >= 2) {
+    return Math.max(1, Math.round(timeToMinutes(slots[1]) - timeToMinutes(slots[0])));
+  }
+  if (slots.length === 1) {
+    return Math.max(1, timeToMinutes(slots[0]) - timeToMinutes(dateToTimeOfDay(now)));
+  }
+  return 0;
 }
 
 /** True when today's Remaining Plan is not the same as the Default Plan. */
@@ -83,8 +97,7 @@ export function buildTodayRemainingPreview(
   return {
     kind: 'active',
     remainingGlasses,
-    windowStart: formatTimeOfDay(remainingWindow.start),
-    windowEnd: formatTimeOfDay(remainingWindow.end),
+    intervalMinutes: buildRemainingPlanIntervalMinutes(slots, input.now),
     nextClockTime: formatTimeOfDay(slots[0]),
   };
 }

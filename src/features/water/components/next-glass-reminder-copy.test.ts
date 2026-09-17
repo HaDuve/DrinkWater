@@ -58,20 +58,35 @@ describe('buildNextGlassReminderBody', () => {
 });
 
 describe('formatTodayRemainingPreviewBody', () => {
-  it('summarizes Remaining Glasses, Remaining Window, and next clock', () => {
+  it('summarizes one Remaining Glass with interval and next clock', () => {
     expect(
       formatTodayRemainingPreviewBody(
         {
           kind: 'active',
-          remainingGlasses: 4,
-          windowStart: '10:01',
-          windowEnd: '17:00',
-          nextClockTime: '10:01',
+          remainingGlasses: 1,
+          intervalMinutes: 40,
+          nextClockTime: '17:00',
         },
         mockT,
       ),
     ).toBe(
-      'settings.todayRemainingPreview:{"count":4,"start":"10:01","end":"17:00","clockTime":"10:01"}',
+      'settings.todayRemainingPreviewOne:{"count":1,"intervalMinutes":40,"clockTime":"17:00"}',
+    );
+  });
+
+  it('summarizes several Remaining Glasses with interval and next clock', () => {
+    expect(
+      formatTodayRemainingPreviewBody(
+        {
+          kind: 'active',
+          remainingGlasses: 2,
+          intervalMinutes: 30,
+          nextClockTime: '17:00',
+        },
+        mockT,
+      ),
+    ).toBe(
+      'settings.todayRemainingPreviewOther:{"count":2,"intervalMinutes":30,"clockTime":"17:00"}',
     );
   });
 
@@ -83,19 +98,35 @@ describe('formatTodayRemainingPreviewBody', () => {
 });
 
 describe('buildRemainingAwareReminderBody', () => {
-  it('names Remaining Glasses with next clock and countdown', () => {
+  it('names one Remaining Glass with interval and next clock', () => {
     expect(
       buildRemainingAwareReminderBody(
         {
           kind: 'active',
-          remainingGlasses: 4,
-          nextClockTime: '10:01',
+          remainingGlasses: 1,
+          intervalMinutes: 40,
+          nextClockTime: '17:00',
         },
-        2 * 60 * 60_000,
         mockT,
       ),
     ).toBe(
-      'reminder.remainingNextAt:{"count":4,"clockTime":"10:01","time":"reminder.timeHoursWhole:{\\"count\\":2}"}',
+      'reminder.remainingNextAtOne:{"count":1,"intervalMinutes":40,"clockTime":"17:00"}',
+    );
+  });
+
+  it('names several Remaining Glasses with interval and next clock', () => {
+    expect(
+      buildRemainingAwareReminderBody(
+        {
+          kind: 'active',
+          remainingGlasses: 2,
+          intervalMinutes: 30,
+          nextClockTime: '17:00',
+        },
+        mockT,
+      ),
+    ).toBe(
+      'reminder.remainingNextAtOther:{"count":2,"intervalMinutes":30,"clockTime":"17:00"}',
     );
   });
 
@@ -103,9 +134,8 @@ describe('buildRemainingAwareReminderBody', () => {
     expect(
       buildRemainingAwareReminderBody(
         { kind: 'silent' },
-        14 * 60 * 60_000,
         mockT,
-        { clockTime: '08:30' },
+        { clockTime: '08:30', msFromNow: 14 * 60 * 60_000 },
       ),
     ).toBe(
       'reminder.remainingSilentNext:{"clockTime":"08:30","time":"reminder.timeHoursWhole:{\\"count\\":14}"}',
@@ -116,7 +146,7 @@ describe('buildRemainingAwareReminderBody', () => {
 describe('buildHomeReminderBody', () => {
   const queuedSlot = { hour: 14, minute: 40 };
 
-  it('uses Remaining Glasses with the queued next slot clock when Today Differs', () => {
+  it('uses Remaining Glasses with interval and queued next slot when Today Differs', () => {
     expect(
       buildHomeReminderBody(
         queuedSlot,
@@ -125,14 +155,13 @@ describe('buildHomeReminderBody', () => {
         {
           kind: 'active',
           remainingGlasses: 4,
-          windowStart: '13:01',
-          windowEnd: '17:00',
+          intervalMinutes: 105,
           nextClockTime: '13:01',
         },
         mockT,
       ),
     ).toBe(
-      'reminder.remainingNextAt:{"count":4,"clockTime":"14:40","time":"reminder.timeHoursWhole:{\\"count\\":2}"}',
+      'reminder.remainingNextAtOther:{"count":4,"intervalMinutes":105,"clockTime":"14:40"}',
     );
   });
 

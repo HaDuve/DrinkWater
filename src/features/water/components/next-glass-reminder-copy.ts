@@ -43,15 +43,17 @@ export function formatTodayRemainingPreviewBody(
     return t('settings.todayRemainingSilent');
   }
 
-  const params = {
+  if (preview.remainingGlasses === 1) {
+    return t('settings.todayRemainingPreviewOne', {
+      count: preview.remainingGlasses,
+      clockTime: preview.nextClockTime,
+    });
+  }
+  return t('settings.todayRemainingPreviewOther', {
     count: preview.remainingGlasses,
     intervalMinutes: preview.intervalMinutes,
     clockTime: preview.nextClockTime,
-  };
-  if (preview.remainingGlasses === 1) {
-    return t('settings.todayRemainingPreviewOne', params);
-  }
-  return t('settings.todayRemainingPreviewOther', params);
+  });
 }
 
 export type RemainingAwareHomePreview =
@@ -69,20 +71,22 @@ export function buildRemainingAwareReminderBody(
   nextSlot?: { clockTime: string; msFromNow: number },
 ): string {
   if (preview.kind === 'active') {
-    const params = {
+    if (preview.remainingGlasses === 1) {
+      return t('reminder.remainingNextAtOne', {
+        count: preview.remainingGlasses,
+        clockTime: preview.nextClockTime,
+      });
+    }
+    return t('reminder.remainingNextAtOther', {
       count: preview.remainingGlasses,
       intervalMinutes: preview.intervalMinutes,
       clockTime: preview.nextClockTime,
-    };
-    if (preview.remainingGlasses === 1) {
-      return t('reminder.remainingNextAtOne', params);
-    }
-    return t('reminder.remainingNextAtOther', params);
+    });
   }
 
-  const clockTime = nextSlot?.clockTime ?? '';
-  const time = formatRelativeReminderTime(nextSlot?.msFromNow ?? 0, t);
-  return t('reminder.remainingSilentNext', { clockTime, time });
+  return t('reminder.remainingSilentNext', {
+    clockTime: nextSlot?.clockTime ?? '',
+  });
 }
 
 export function buildHomeReminderBody(

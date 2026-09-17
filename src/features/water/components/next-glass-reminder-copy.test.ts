@@ -58,7 +58,7 @@ describe('buildNextGlassReminderBody', () => {
 });
 
 describe('formatTodayRemainingPreviewBody', () => {
-  it('summarizes one Remaining Glass with interval and next clock', () => {
+  it('summarizes one Remaining Glass as last reminder clock only', () => {
     expect(
       formatTodayRemainingPreviewBody(
         {
@@ -69,9 +69,7 @@ describe('formatTodayRemainingPreviewBody', () => {
         },
         mockT,
       ),
-    ).toBe(
-      'settings.todayRemainingPreviewOne:{"count":1,"intervalMinutes":40,"clockTime":"17:00"}',
-    );
+    ).toBe('settings.todayRemainingPreviewOne:{"count":1,"clockTime":"17:00"}');
   });
 
   it('summarizes several Remaining Glasses with interval and next clock', () => {
@@ -98,7 +96,7 @@ describe('formatTodayRemainingPreviewBody', () => {
 });
 
 describe('buildRemainingAwareReminderBody', () => {
-  it('names one Remaining Glass with interval and next clock', () => {
+  it('names one Remaining Glass as last reminder clock only', () => {
     expect(
       buildRemainingAwareReminderBody(
         {
@@ -109,9 +107,7 @@ describe('buildRemainingAwareReminderBody', () => {
         },
         mockT,
       ),
-    ).toBe(
-      'reminder.remainingNextAtOne:{"count":1,"intervalMinutes":40,"clockTime":"17:00"}',
-    );
+    ).toBe('reminder.remainingNextAtOne:{"count":1,"clockTime":"17:00"}');
   });
 
   it('names several Remaining Glasses with interval and next clock', () => {
@@ -130,16 +126,14 @@ describe('buildRemainingAwareReminderBody', () => {
     );
   });
 
-  it('states silence then points at the next Default Plan slot', () => {
+  it('states silence then points at tomorrow Default Plan clock', () => {
     expect(
       buildRemainingAwareReminderBody(
         { kind: 'silent' },
         mockT,
         { clockTime: '08:30', msFromNow: 14 * 60 * 60_000 },
       ),
-    ).toBe(
-      'reminder.remainingSilentNext:{"clockTime":"08:30","time":"reminder.timeHoursWhole:{\\"count\\":14}"}',
-    );
+    ).toBe('reminder.remainingSilentNext:{"clockTime":"08:30"}');
   });
 });
 
@@ -165,7 +159,7 @@ describe('buildHomeReminderBody', () => {
     );
   });
 
-  it('states silence with the queued next slot when Remaining Plan is empty', () => {
+  it('states silence with tomorrow clock when Remaining Plan is empty', () => {
     expect(
       buildHomeReminderBody(
         { hour: 8, minute: 30 },
@@ -174,9 +168,7 @@ describe('buildHomeReminderBody', () => {
         { kind: 'silent' },
         mockT,
       ),
-    ).toBe(
-      'reminder.remainingSilentNext:{"clockTime":"08:30","time":"reminder.timeHoursWhole:{\\"count\\":14}"}',
-    );
+    ).toBe('reminder.remainingSilentNext:{"clockTime":"08:30"}');
   });
 
   it('keeps the existing next-reminder line when Today does not differ', () => {

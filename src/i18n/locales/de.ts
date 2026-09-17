@@ -31,7 +31,7 @@ export const de: TranslationResources = {
       "Passe Ziel, Glasmenge oder Fenster an, damit der Plan passt.",
     todaySectionTitle: "Heute",
     todayRemainingPreviewOne:
-      "noch {{count}} Glas – alle {{intervalMinutes}} Minuten\nnächste Erinnerung um {{clockTime}}",
+      "noch {{count}} Glas – letzte Erinnerung um {{clockTime}}",
     todayRemainingPreviewOther:
       "noch {{count}} Gläser – alle {{intervalMinutes}} Minuten\nnächste Erinnerung um {{clockTime}}",
     todayRemainingSilent: "Heute keine Erinnerungen mehr.",
@@ -98,11 +98,11 @@ export const de: TranslationResources = {
     nextAtToday: "Nächste Erinnerung um {{clockTime}} in {{time}}.",
     doneForToday: "Heutige Erinnerungen erledigt. Nächste um {{clockTime}} in {{time}}.",
     remainingNextAtOne:
-      "noch {{count}} Glas – alle {{intervalMinutes}} Minuten\nnächste Erinnerung um {{clockTime}}",
+      "noch {{count}} Glas – letzte Erinnerung um {{clockTime}}",
     remainingNextAtOther:
       "noch {{count}} Gläser – alle {{intervalMinutes}} Minuten\nnächste Erinnerung um {{clockTime}}",
     remainingSilentNext:
-      "Heute keine Erinnerungen mehr. Nächste um {{clockTime}} in {{time}}.",
+      "Heute keine Erinnerungen mehr.\nNächste morgen um {{clockTime}}",
     linkSettings: "Einstellungen",
     linkTurnOn: "In Einstellungen aktivieren",
     linkSetup: "In Einstellungen einrichten",

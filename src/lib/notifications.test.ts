@@ -3,11 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ReminderWindow } from '@/features/water/domain/glass-schedule';
 
 import {
+  buildDefaultPlanFireDates,
   cancelWaterReminders,
   getWaterReminderUiState,
-  scheduledGlassSlotsMatch,
   syncWaterReminders,
-  waterReminderTriggerFromSlot,
+  waterReminderTriggerFromDate,
 } from './notifications';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -35,6 +35,7 @@ const mockSetNotificationChannelAsync = jest.fn();
 jest.mock('expo-notifications', () => ({
   SchedulableTriggerInputTypes: {
     DAILY: 'daily',
+    DATE: 'date',
     TIME_INTERVAL: 'timeInterval',
   },
   AndroidImportance: { DEFAULT: 3 },
@@ -84,49 +85,58 @@ beforeEach(async () => {
   mockGetNextTriggerDateAsync.mockResolvedValue(null);
 });
 
-describe('waterReminderTriggerFromSlot', () => {
-  it('builds a daily trigger at the slot hour and minute', () => {
-    expect(waterReminderTriggerFromSlot({ hour: 8, minute: 30 })).toEqual({
-      type: 'daily',
-      hour: 8,
-      minute: 30,
+describe('waterReminderTriggerFromDate', () => {
+  it('builds a dated one-shot trigger at the given Date', () => {
+    const date = new Date(2026, 8, 2, 8, 30, 0, 0);
+    expect(waterReminderTriggerFromDate(date)).toEqual({
+      type: 'date',
+      date,
     });
   });
 });
 
-describe('scheduledGlassSlotsMatch', () => {
-  it('returns true when scheduled daily triggers match expected slots', () => {
-    const scheduled = expectedDefaultSlots.map((slot) => ({
-      trigger: { type: 'daily', hour: slot.hour, minute: slot.minute },
-    }));
+describe('buildDefaultPlanFireDates', () => {
+  it('queues future today slots plus tomorrow slots at the same clock times', () => {
+    const now = new Date(2026, 8, 2, 12, 0, 0);
+    const slots = [
+      { hour: 8, minute: 30 },
+      { hour: 17, minute: 0 },
+    ];
 
-    expect(scheduledGlassSlotsMatch(scheduled, expectedDefaultSlots)).toBe(true);
-  });
-
-  it('returns false when slot count or times differ', () => {
-    const scheduled = [{ trigger: { type: 'daily', hour: 8, minute: 30 } }];
-
-    expect(scheduledGlassSlotsMatch(scheduled, expectedDefaultSlots)).toBe(false);
+    expect(buildDefaultPlanFireDates(slots, now)).toEqual([
+      new Date(2026, 8, 2, 17, 0, 0, 0),
+      new Date(2026, 8, 3, 8, 30, 0, 0),
+      new Date(2026, 8, 3, 17, 0, 0, 0),
+    ]);
   });
 });
 
 describe('syncWaterReminders', () => {
-  it('schedules one daily notification per computed glass slot', async () => {
+  it('queues today and tomorrow Default Plans as dated one-shots', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 2, 7, 0, 0));
+
     await syncWaterReminders(true, defaultScheduleInput);
 
-    expect(mockScheduleNotificationAsync).toHaveBeenCalledTimes(8);
-    expect(mockScheduleNotificationAsync.mock.calls.map(([request]) => request.trigger)).toEqual(
-      expectedDefaultSlots.map((slot) => ({
-        type: 'daily',
-        hour: slot.hour,
-        minute: slot.minute,
+    expect(mockScheduleNotificationAsync).toHaveBeenCalledTimes(16);
+    expect(mockScheduleNotificationAsync.mock.calls.map(([request]) => request.trigger)).toEqual([
+      ...expectedDefaultSlots.map((slot) => ({
+        type: 'date',
+        date: new Date(2026, 8, 2, slot.hour, slot.minute, 0, 0),
       })),
-    );
+      ...expectedDefaultSlots.map((slot) => ({
+        type: 'date',
+        date: new Date(2026, 8, 3, slot.hour, slot.minute, 0, 0),
+      })),
+    ]);
 
-    const storedIds = JSON.parse(
-      (await AsyncStorage.getItem('@water_reminder_notification_ids')) ?? '[]',
-    ) as string[];
-    expect(storedIds).toHaveLength(8);
+    const stored = JSON.parse(
+      (await AsyncStorage.getItem('@water_reminder_notification_ids')) ?? '{}',
+    ) as { ids: string[]; fireMs: number[] };
+    expect(stored.ids).toHaveLength(16);
+    expect(stored.fireMs).toHaveLength(16);
+
+    jest.useRealTimers();
   });
 
   it('cancels previous reminder ids before rescheduling', async () => {
@@ -164,19 +174,41 @@ describe('syncWaterReminders', () => {
     expect(await AsyncStorage.getItem('@water_reminder_notification_ids')).toBeNull();
   });
 
-  it('leaves the OS schedule unchanged when slots already match', async () => {
-    const ids = ['slot-1', 'slot-2'];
-    await AsyncStorage.setItem('@water_reminder_notification_ids', JSON.stringify(ids));
-    mockGetAllScheduledNotificationsAsync.mockResolvedValue([
-      {
-        identifier: 'slot-1',
-        trigger: { type: 'daily', hour: 8, minute: 30 },
-      },
-      {
-        identifier: 'slot-2',
-        trigger: { type: 'daily', hour: 17, minute: 0 },
-      },
-    ]);
+  it('leaves the OS schedule unchanged when dated one-shots already match', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 2, 7, 0, 0));
+
+    await syncWaterReminders(true, defaultScheduleInput);
+    const scheduledRequests = mockScheduleNotificationAsync.mock.calls.map(([request], index) => ({
+      identifier: `id-${index + 1}`,
+      trigger: request.trigger,
+    }));
+    mockGetAllScheduledNotificationsAsync.mockResolvedValue(scheduledRequests);
+    mockScheduleNotificationAsync.mockClear();
+    mockCancelScheduledNotificationAsync.mockClear();
+
+    await syncWaterReminders(true, defaultScheduleInput);
+
+    expect(mockScheduleNotificationAsync).not.toHaveBeenCalled();
+    expect(mockCancelScheduledNotificationAsync).not.toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
+  it('reschedules today and tomorrow one-shots when goal changes the slot count', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 2, 7, 0, 0));
+
+    await syncWaterReminders(true, defaultScheduleInput);
+    const previousIds = mockScheduleNotificationAsync.mock.calls.map((_, index) => `id-${index + 1}`);
+    mockGetAllScheduledNotificationsAsync.mockResolvedValue(
+      previousIds.map((identifier) => ({
+        identifier,
+        trigger: { type: 'timeInterval', seconds: 60, repeats: false },
+      })),
+    );
+    mockScheduleNotificationAsync.mockClear();
+    mockCancelScheduledNotificationAsync.mockClear();
 
     await syncWaterReminders(true, {
       goalMl: 500,
@@ -184,59 +216,16 @@ describe('syncWaterReminders', () => {
       window: defaultWindow,
     });
 
-    expect(mockScheduleNotificationAsync).not.toHaveBeenCalled();
-    expect(mockCancelScheduledNotificationAsync).not.toHaveBeenCalled();
-  });
-
-  it('skips reschedule when the OS timetable already matches the input', async () => {
-    await syncWaterReminders(true, defaultScheduleInput);
-    mockScheduleNotificationAsync.mockClear();
-    mockCancelScheduledNotificationAsync.mockClear();
-
-    mockGetAllScheduledNotificationsAsync.mockResolvedValue(
-      expectedDefaultSlots.map((slot, index) => ({
-        identifier: `id-${index + 1}`,
-        trigger: { type: 'daily', hour: slot.hour, minute: slot.minute },
-      })),
-    );
-    await AsyncStorage.setItem(
-      '@water_reminder_notification_ids',
-      JSON.stringify(expectedDefaultSlots.map((_, index) => `id-${index + 1}`)),
-    );
-
-    await syncWaterReminders(true, defaultScheduleInput);
-
-    expect(mockScheduleNotificationAsync).not.toHaveBeenCalled();
-  });
-
-  it('reschedules when goal changes the slot count', async () => {
-    await syncWaterReminders(true, defaultScheduleInput);
-    mockScheduleNotificationAsync.mockClear();
-    mockCancelScheduledNotificationAsync.mockClear();
-
-    mockGetAllScheduledNotificationsAsync.mockResolvedValue(
-      expectedDefaultSlots.map((slot, index) => ({
-        identifier: `id-${index + 1}`,
-        trigger: { type: 'daily', hour: slot.hour, minute: slot.minute },
-      })),
-    );
-    await AsyncStorage.setItem(
-      '@water_reminder_notification_ids',
-      JSON.stringify(expectedDefaultSlots.map((_, index) => `id-${index + 1}`)),
-    );
-
-    await syncWaterReminders(true, {
-      goalMl: 500,
-      glassMl: 250,
-      window: defaultWindow,
-    });
-
-    expect(mockCancelScheduledNotificationAsync).toHaveBeenCalledTimes(8);
-    expect(mockScheduleNotificationAsync).toHaveBeenCalledTimes(2);
+    expect(mockCancelScheduledNotificationAsync).toHaveBeenCalledTimes(16);
+    expect(mockScheduleNotificationAsync).toHaveBeenCalledTimes(4);
     expect(mockScheduleNotificationAsync.mock.calls.map(([request]) => request.trigger)).toEqual([
-      { type: 'daily', hour: 8, minute: 30 },
-      { type: 'daily', hour: 17, minute: 0 },
+      { type: 'date', date: new Date(2026, 8, 2, 8, 30, 0, 0) },
+      { type: 'date', date: new Date(2026, 8, 2, 17, 0, 0, 0) },
+      { type: 'date', date: new Date(2026, 8, 3, 8, 30, 0, 0) },
+      { type: 'date', date: new Date(2026, 8, 3, 17, 0, 0, 0) },
     ]);
+
+    jest.useRealTimers();
   });
 });
 
@@ -264,18 +253,44 @@ describe('getWaterReminderUiState', () => {
     jest.useRealTimers();
   });
 
-  it('returns the next domain slot and matching trigger time for display', async () => {
-    const now = Date.now();
-    const firstTrigger = new Date(2026, 8, 2, 8, 30, 0).getTime();
-    const ids = expectedDefaultSlots.map((_, index) => `slot-${index}`);
-    await AsyncStorage.setItem('@water_reminder_notification_ids', JSON.stringify(ids));
+  it('stays active after save when iOS returns timeInterval triggers for dated one-shots', async () => {
+    await syncWaterReminders(true, defaultScheduleInput);
+
+    const stored = JSON.parse(
+      (await AsyncStorage.getItem('@water_reminder_notification_ids')) ?? '{}',
+    ) as { ids: string[] };
+    expect(stored.ids).toHaveLength(16);
+
     mockGetAllScheduledNotificationsAsync.mockResolvedValue(
-      expectedDefaultSlots.map((slot, index) => ({
-        identifier: `slot-${index}`,
-        trigger: { type: 'daily', hour: slot.hour, minute: slot.minute },
+      stored.ids.map((identifier) => ({
+        identifier,
+        trigger: { type: 'timeInterval', seconds: 3600, repeats: false },
       })),
     );
-    mockGetNextTriggerDateAsync.mockResolvedValue(now + 15 * 60_000);
+    mockGetNextTriggerDateAsync.mockResolvedValue(Date.now() + 90 * 60_000);
+
+    const state = await getWaterReminderUiState(true, defaultScheduleInput);
+
+    expect(state.kind).toBe('active');
+    if (state.kind === 'active') {
+      expect(state.nextSlot).toEqual({ hour: 8, minute: 30 });
+      expect(state.slotDay).toBe('today');
+    }
+  });
+
+  it('returns the next domain slot and matching trigger time for display', async () => {
+    const firstTrigger = new Date(2026, 8, 2, 8, 30, 0).getTime();
+    await syncWaterReminders(true, defaultScheduleInput);
+    const stored = JSON.parse(
+      (await AsyncStorage.getItem('@water_reminder_notification_ids')) ?? '{}',
+    ) as { ids: string[] };
+    mockGetAllScheduledNotificationsAsync.mockResolvedValue(
+      stored.ids.map((identifier) => ({
+        identifier,
+        trigger: { type: 'timeInterval', seconds: 3600, repeats: false },
+      })),
+    );
+    mockGetNextTriggerDateAsync.mockResolvedValue(Date.now() + 15 * 60_000);
 
     const state = await getWaterReminderUiState(true, defaultScheduleInput);
 
@@ -289,21 +304,18 @@ describe('getWaterReminderUiState', () => {
 
   it('uses the domain pick at slot boundaries even when OS next triggers differ', async () => {
     jest.setSystemTime(new Date(2026, 8, 2, 8, 30, 0));
-    const now = Date.now();
     const nextTrigger = new Date(2026, 8, 2, 9, 43, 0).getTime();
-    const ids = expectedDefaultSlots.map((_, index) => `slot-${index}`);
-    await AsyncStorage.setItem('@water_reminder_notification_ids', JSON.stringify(ids));
+    await syncWaterReminders(true, defaultScheduleInput);
+    const stored = JSON.parse(
+      (await AsyncStorage.getItem('@water_reminder_notification_ids')) ?? '{}',
+    ) as { ids: string[] };
     mockGetAllScheduledNotificationsAsync.mockResolvedValue(
-      expectedDefaultSlots.map((slot, index) => ({
-        identifier: `slot-${index}`,
-        trigger: { type: 'daily', hour: slot.hour, minute: slot.minute },
+      stored.ids.map((identifier) => ({
+        identifier,
+        trigger: { type: 'timeInterval', seconds: 3600, repeats: false },
       })),
     );
-    mockGetNextTriggerDateAsync.mockImplementation(async (trigger: { hour: number; minute: number }) => {
-      if (trigger.hour === 8 && trigger.minute === 30) return now + 24 * 60 * 60_000;
-      if (trigger.hour === 9 && trigger.minute === 43) return now + 73 * 60_000;
-      return now + 24 * 60 * 60_000;
-    });
+    mockGetNextTriggerDateAsync.mockResolvedValue(Date.now() + 24 * 60 * 60_000);
 
     const state = await getWaterReminderUiState(true, defaultScheduleInput);
 
@@ -318,12 +330,14 @@ describe('getWaterReminderUiState', () => {
   it('marks the next slot as tomorrow after today\'s last slot', async () => {
     jest.setSystemTime(new Date(2026, 8, 2, 18, 0, 0));
     const tomorrowFirst = new Date(2026, 8, 3, 8, 30, 0).getTime();
-    const ids = expectedDefaultSlots.map((_, index) => `slot-${index}`);
-    await AsyncStorage.setItem('@water_reminder_notification_ids', JSON.stringify(ids));
+    await syncWaterReminders(true, defaultScheduleInput);
+    const stored = JSON.parse(
+      (await AsyncStorage.getItem('@water_reminder_notification_ids')) ?? '{}',
+    ) as { ids: string[] };
     mockGetAllScheduledNotificationsAsync.mockResolvedValue(
-      expectedDefaultSlots.map((slot, index) => ({
-        identifier: `slot-${index}`,
-        trigger: { type: 'daily', hour: slot.hour, minute: slot.minute },
+      stored.ids.map((identifier) => ({
+        identifier,
+        trigger: { type: 'timeInterval', seconds: 3600, repeats: false },
       })),
     );
     mockGetNextTriggerDateAsync.mockResolvedValue(tomorrowFirst);

@@ -50,74 +50,105 @@ export type WaterReminderUiState =
   | { kind: 'inactive' }
   | { kind: 'active'; nextTriggerMs: number; nextSlot: TimeOfDay; slotDay: 'today' | 'tomorrow' };
 
-function timeOfDaySortKey(time: TimeOfDay): number {
-  return time.hour * 60 + time.minute;
-}
-
-function sortTimeOfDaySlots(slots: TimeOfDay[]): TimeOfDay[] {
-  return [...slots].sort((a, b) => timeOfDaySortKey(a) - timeOfDaySortKey(b));
-}
-
-export function timeOfDayFromDailyTrigger(
-  trigger: import('expo-notifications').NotificationTrigger,
-): TimeOfDay | null {
-  if (trigger === null || typeof trigger !== 'object') return null;
-  if (!('hour' in trigger) || !('minute' in trigger)) return null;
-
-  const hour = (trigger as { hour: unknown }).hour;
-  const minute = (trigger as { minute: unknown }).minute;
-  if (typeof hour !== 'number' || typeof minute !== 'number') return null;
-
-  return { hour, minute };
-}
-
-export function scheduledGlassSlotsMatch(
-  scheduled: { trigger: import('expo-notifications').NotificationTrigger }[],
-  expectedSlots: TimeOfDay[],
-): boolean {
-  const fromOs = scheduled
-    .map((request) => timeOfDayFromDailyTrigger(request.trigger))
-    .filter((slot): slot is TimeOfDay => slot !== null);
-
-  if (fromOs.length !== expectedSlots.length) return false;
-
-  const actual = sortTimeOfDaySlots(fromOs);
-  const expected = sortTimeOfDaySlots(expectedSlots);
-  return actual.every(
-    (slot, index) =>
-      slot.hour === expected[index].hour && slot.minute === expected[index].minute,
-  );
-}
-
-/** Trigger input for one daily glass-slot reminder. */
-export function waterReminderTriggerFromSlot(
-  slot: TimeOfDay,
+/** Trigger input for one dated glass-slot reminder. */
+export function waterReminderTriggerFromDate(
+  date: Date,
 ): import('expo-notifications').SchedulableNotificationTriggerInput {
   const Notifications = getNotificationsModule();
   if (Notifications) {
     return {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: slot.hour,
-      minute: slot.minute,
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date,
     };
   }
   return {
-    type: 'daily' as unknown as import('expo-notifications').SchedulableTriggerInputTypes.DAILY,
-    hour: slot.hour,
-    minute: slot.minute,
+    type: 'date' as unknown as import('expo-notifications').SchedulableTriggerInputTypes.DATE,
+    date,
   };
 }
 
+function slotDateOnDay(slot: TimeOfDay, day: Date): Date {
+  const trigger = new Date(day);
+  trigger.setHours(slot.hour, slot.minute, 0, 0);
+  return trigger;
+}
+
+/** Future Glass Slot fire times for today's and tomorrow's Default Plans. */
+export function buildDefaultPlanFireDates(slots: TimeOfDay[], now: Date): Date[] {
+  const fires: Date[] = [];
+  for (const dayOffset of [0, 1]) {
+    const day = new Date(now);
+    day.setDate(day.getDate() + dayOffset);
+    for (const slot of slots) {
+      const trigger = slotDateOnDay(slot, day);
+      if (trigger.getTime() > now.getTime()) {
+        fires.push(trigger);
+      }
+    }
+  }
+  return fires;
+}
+
 async function readStoredNotificationIds(): Promise<string[]> {
+  const stored = await readStoredReminderSchedule();
+  return stored.ids;
+}
+
+type StoredReminderSchedule = {
+  ids: string[];
+  fireMs: number[];
+};
+
+function fireMsListsMatch(actual: number[], expected: number[]): boolean {
+  if (actual.length !== expected.length) return false;
+  const sortedActual = [...actual].sort((a, b) => a - b);
+  const sortedExpected = [...expected].sort((a, b) => a - b);
+  return sortedActual.every((ms, index) => ms === sortedExpected[index]);
+}
+
+async function readStoredReminderSchedule(): Promise<StoredReminderSchedule> {
   const raw = await AsyncStorage.getItem(NOTIFICATION_IDS_KEY);
-  if (!raw) return [];
+  if (!raw) return { ids: [], fireMs: [] };
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((id): id is string => typeof id === 'string');
+    if (Array.isArray(parsed)) {
+      return {
+        ids: parsed.filter((id): id is string => typeof id === 'string'),
+        fireMs: [],
+      };
+    }
+    if (
+      parsed !== null &&
+      typeof parsed === 'object' &&
+      Array.isArray((parsed as { ids?: unknown }).ids) &&
+      Array.isArray((parsed as { fireMs?: unknown }).fireMs)
+    ) {
+      const ids = (parsed as { ids: unknown[] }).ids.filter(
+        (id): id is string => typeof id === 'string',
+      );
+      const fireMs = (parsed as { fireMs: unknown[] }).fireMs.filter(
+        (ms): ms is number => typeof ms === 'number',
+      );
+      return { ids, fireMs };
+    }
+    return { ids: [], fireMs: [] };
   } catch {
-    return [];
+    return { ids: [], fireMs: [] };
   }
+}
+
+async function saveStoredReminderSchedule(schedule: StoredReminderSchedule): Promise<void> {
+  await AsyncStorage.setItem(NOTIFICATION_IDS_KEY, JSON.stringify(schedule));
+}
+
+function storedScheduleMatchesOs(
+  stored: StoredReminderSchedule,
+  scheduled: { identifier: string }[],
+  expectedFireMs: number[],
+): boolean {
+  if (!fireMsListsMatch(stored.fireMs, expectedFireMs)) return false;
+  if (stored.ids.length === 0) return false;
+  return stored.ids.every((id) => scheduled.some((request) => request.identifier === id));
 }
 
 async function resolveWaterReminderUiState(
@@ -137,27 +168,21 @@ async function resolveWaterReminderUiState(
     const scheduleResult = buildGlassSchedule(input);
     if (!scheduleResult.ok) return { kind: 'inactive' };
 
-    const storedIds = await readStoredNotificationIds();
-    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    const matched = storedIds
-      .map((id) => scheduled.find((request) => request.identifier === id))
-      .filter((request): request is import('expo-notifications').NotificationRequest => request !== undefined);
+    const now = new Date();
+    const expectedFireDates = buildDefaultPlanFireDates(scheduleResult.schedule.slots, now);
+    const expectedFireMs = expectedFireDates.map((date) => date.getTime());
 
-    if (!scheduledGlassSlotsMatch(matched, scheduleResult.schedule.slots)) {
+    const stored = await readStoredReminderSchedule();
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+
+    if (!storedScheduleMatchesOs(stored, scheduled, expectedFireMs)) {
       return { kind: 'inactive' };
     }
 
-    const nextTriggerDates = await Promise.all(
-      matched.map(async (request) => {
-        const slot = timeOfDayFromDailyTrigger(request.trigger);
-        if (!slot) return null;
-        return Notifications.getNextTriggerDateAsync(waterReminderTriggerFromSlot(slot));
-      }),
-    );
-    const hasScheduledTrigger = nextTriggerDates.some((value) => value != null);
-    if (!hasScheduledTrigger) return { kind: 'inactive' };
+    const hasFutureFire = expectedFireMs.some((ms) => ms > now.getTime());
+    if (!hasFutureFire) return { kind: 'inactive' };
 
-    const nextSlot = pickNextGlassSlot(scheduleResult.schedule.slots, new Date());
+    const nextSlot = pickNextGlassSlot(scheduleResult.schedule.slots, now);
     if (!nextSlot) return { kind: 'inactive' };
 
     return {
@@ -232,7 +257,7 @@ export async function cancelWaterReminders(): Promise<void> {
 }
 
 /**
- * Schedules one daily local notification per computed glass slot.
+ * Schedules dated one-shot local notifications for today's and tomorrow's Default Plans.
  * Cancels any previous water reminder schedule first.
  */
 export async function scheduleWaterReminders(input: WaterReminderScheduleInput): Promise<boolean> {
@@ -246,25 +271,29 @@ export async function scheduleWaterReminders(input: WaterReminderScheduleInput):
   const granted = await requestNotificationPermissions();
   if (!granted) return false;
 
+  const fireDates = buildDefaultPlanFireDates(scheduleResult.schedule.slots, new Date());
   const ids: string[] = [];
-  for (const slot of scheduleResult.schedule.slots) {
+  for (const date of fireDates) {
     const identifier = await Notifications.scheduleNotificationAsync({
       content: {
         title: i18next.t('notifications.title'),
         body: i18next.t('notifications.body'),
       },
-      trigger: waterReminderTriggerFromSlot(slot),
+      trigger: waterReminderTriggerFromDate(date),
     });
     ids.push(identifier);
   }
 
-  await AsyncStorage.setItem(NOTIFICATION_IDS_KEY, JSON.stringify(ids));
+  await saveStoredReminderSchedule({
+    ids,
+    fireMs: fireDates.map((date) => date.getTime()),
+  });
   return true;
 }
 
 /**
- * Applies reminder settings: schedules daily glass slots when enabled, cancels when disabled.
- * When reminders stay on with the same slot timetable, leaves the existing schedule in place.
+ * Applies reminder settings: schedules today + tomorrow Default Plan one-shots when enabled,
+ * cancels when disabled. When reminders stay on with the same fire times, leaves the OS schedule.
  */
 export async function syncWaterReminders(
   enabled: boolean,
@@ -283,13 +312,13 @@ export async function syncWaterReminders(
     return;
   }
 
-  const storedIds = await readStoredNotificationIds();
-  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  const matched = storedIds
-    .map((id) => scheduled.find((request) => request.identifier === id))
-    .filter((request): request is import('expo-notifications').NotificationRequest => request !== undefined);
+  const expectedFireDates = buildDefaultPlanFireDates(scheduleResult.schedule.slots, new Date());
+  const expectedFireMs = expectedFireDates.map((date) => date.getTime());
 
-  if (scheduledGlassSlotsMatch(matched, scheduleResult.schedule.slots)) {
+  const stored = await readStoredReminderSchedule();
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+
+  if (storedScheduleMatchesOs(stored, scheduled, expectedFireMs)) {
     return;
   }
 

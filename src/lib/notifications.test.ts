@@ -265,11 +265,11 @@ describe('syncWaterReminders', () => {
 
     expect(mockCancelScheduledNotificationAsync).toHaveBeenCalled();
     expect(mockScheduleNotificationAsync.mock.calls.map(([request]) => request.trigger)).toEqual([
-      { type: 'date', date: new Date(2026, 8, 2, 10, 1, 0, 0) },
-      { type: 'date', date: new Date(2026, 8, 2, 11, 25, 0, 0) },
-      { type: 'date', date: new Date(2026, 8, 2, 12, 49, 0, 0) },
-      { type: 'date', date: new Date(2026, 8, 2, 14, 12, 0, 0) },
-      { type: 'date', date: new Date(2026, 8, 2, 15, 36, 0, 0) },
+      { type: 'date', date: new Date(2026, 8, 2, 11, 11, 0, 0) },
+      { type: 'date', date: new Date(2026, 8, 2, 12, 21, 0, 0) },
+      { type: 'date', date: new Date(2026, 8, 2, 13, 31, 0, 0) },
+      { type: 'date', date: new Date(2026, 8, 2, 14, 40, 0, 0) },
+      { type: 'date', date: new Date(2026, 8, 2, 15, 50, 0, 0) },
       { type: 'date', date: new Date(2026, 8, 2, 17, 0, 0, 0) },
       ...expectedDefaultSlots.map((slot) => ({
         type: 'date',

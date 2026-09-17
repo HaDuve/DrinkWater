@@ -71,7 +71,11 @@ export function buildTodayRemainingPreview(
     return { kind: 'silent' };
   }
 
-  const slots = buildRemainingPlanSlots(remainingGlasses, remainingWindow);
+  const pinFirstToStart =
+    timeToMinutes(remainingWindow.start) === timeToMinutes(input.window.start);
+  const slots = buildRemainingPlanSlots(remainingGlasses, remainingWindow, {
+    pinFirstToStart,
+  });
   if (slots.length === 0) {
     return { kind: 'silent' };
   }

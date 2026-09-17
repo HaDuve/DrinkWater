@@ -37,7 +37,7 @@ _Avoid_: static schedule
 From the later of Reminder Window start and the next future minute, through Reminder Window end. None once that start is not before the end.
 
 **Remaining Plan**:
-Even Glass Slots for Remaining Glasses across the Remaining Window, last slot pinned to window end. Empty when Remaining Glasses is zero or there is no Remaining Window.
+Even Glass Slots for Remaining Glasses across the Remaining Window, last slot pinned to window end. When the Remaining Window start was clipped by now (mid-day pacing), first slot is deferred into the window — not at the next minute — so logging a Glass bumps the next reminder later. Empty when Remaining Glasses is zero or there is no Remaining Window.
 _Avoid_: dynamic notifications, live schedule
 
 **Pacing Event**:

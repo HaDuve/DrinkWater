@@ -45,36 +45,60 @@ describe('buildRemainingWindow', () => {
 });
 
 describe('buildRemainingPlanSlots', () => {
-  it('even-spreads Remaining Glasses across the Remaining Window with last at end', () => {
+  it('when pinned, even-spreads with first at Remaining Window start and last at end', () => {
+    const remainingWindow = {
+      start: { hour: 8, minute: 30 },
+      end: { hour: 17, minute: 0 },
+    };
+    expect(
+      buildRemainingPlanSlots(4, remainingWindow, { pinFirstToStart: true }),
+    ).toEqual([
+      { hour: 8, minute: 30 },
+      { hour: 11, minute: 20 },
+      { hour: 14, minute: 10 },
+      { hour: 17, minute: 0 },
+    ]);
+  });
+
+  it('when deferred, even-spreads interval ends so first is not at Remaining Window start', () => {
     const remainingWindow = {
       start: { hour: 10, minute: 1 },
       end: { hour: 17, minute: 0 },
     };
-    expect(buildRemainingPlanSlots(4, remainingWindow)).toEqual([
-      { hour: 10, minute: 1 },
-      { hour: 12, minute: 21 },
-      { hour: 14, minute: 40 },
+    expect(
+      buildRemainingPlanSlots(4, remainingWindow, { pinFirstToStart: false }),
+    ).toEqual([
+      { hour: 11, minute: 46 },
+      { hour: 13, minute: 31 },
+      { hour: 15, minute: 15 },
       { hour: 17, minute: 0 },
     ]);
   });
 
   it('places a single Remaining Glass at window end', () => {
     expect(
-      buildRemainingPlanSlots(1, {
-        start: { hour: 10, minute: 1 },
-        end: { hour: 17, minute: 0 },
-      }),
+      buildRemainingPlanSlots(
+        1,
+        {
+          start: { hour: 10, minute: 1 },
+          end: { hour: 17, minute: 0 },
+        },
+        { pinFirstToStart: false },
+      ),
     ).toEqual([{ hour: 17, minute: 0 }]);
   });
 
-  it('schedules as many as fit at ≥5-minute gaps and keeps the last at window end', () => {
+  it('when deferred, schedules as many as fit at ≥5-minute gaps and keeps the last at window end', () => {
     expect(
-      buildRemainingPlanSlots(10, {
-        start: { hour: 16, minute: 45 },
-        end: { hour: 17, minute: 0 },
-      }),
+      buildRemainingPlanSlots(
+        10,
+        {
+          start: { hour: 16, minute: 45 },
+          end: { hour: 17, minute: 0 },
+        },
+        { pinFirstToStart: false },
+      ),
     ).toEqual([
-      { hour: 16, minute: 45 },
       { hour: 16, minute: 50 },
       { hour: 16, minute: 55 },
       { hour: 17, minute: 0 },
@@ -83,15 +107,40 @@ describe('buildRemainingPlanSlots', () => {
 
   it('is empty when Remaining Glasses is zero', () => {
     expect(
-      buildRemainingPlanSlots(0, {
-        start: { hour: 10, minute: 1 },
-        end: { hour: 17, minute: 0 },
-      }),
+      buildRemainingPlanSlots(
+        0,
+        {
+          start: { hour: 10, minute: 1 },
+          end: { hour: 17, minute: 0 },
+        },
+        { pinFirstToStart: false },
+      ),
     ).toEqual([]);
   });
 });
 
 describe('buildReminderPlanFireDates', () => {
+  it('after drinking, next today fire is spaced into the Remaining Window — not ~1 minute later', () => {
+    // User: 2 glasses left in a 4h window → next ping should bump later, not fire almost immediately.
+    const now = new Date(2026, 8, 2, 14, 0, 0);
+    const fires = buildReminderPlanFireDates({
+      goalMl: 500,
+      glassMl: 250,
+      intakeMl: 0,
+      window: {
+        start: { hour: 8, minute: 0 },
+        end: { hour: 18, minute: 0 },
+      },
+      now,
+    });
+    const todayFires = fires.filter((date) => date.getDate() === 2);
+    expect(todayFires).toEqual([
+      new Date(2026, 8, 2, 16, 1, 0, 0),
+      new Date(2026, 8, 2, 18, 0, 0, 0),
+    ]);
+    expect(todayFires[0].getTime() - now.getTime()).toBeGreaterThan(60_000);
+  });
+
   it('queues today Remaining Plan slots plus tomorrow Default Plan slots', () => {
     const now = new Date(2026, 8, 2, 10, 0, 0);
     expect(
@@ -103,9 +152,9 @@ describe('buildReminderPlanFireDates', () => {
         now,
       }),
     ).toEqual([
-      new Date(2026, 8, 2, 10, 1, 0, 0),
-      new Date(2026, 8, 2, 12, 21, 0, 0),
-      new Date(2026, 8, 2, 14, 40, 0, 0),
+      new Date(2026, 8, 2, 11, 46, 0, 0),
+      new Date(2026, 8, 2, 13, 31, 0, 0),
+      new Date(2026, 8, 2, 15, 15, 0, 0),
       new Date(2026, 8, 2, 17, 0, 0, 0),
       new Date(2026, 8, 3, 8, 30, 0, 0),
       new Date(2026, 8, 3, 11, 20, 0, 0),

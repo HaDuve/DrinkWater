@@ -51,14 +51,22 @@ function minutesToTime(minutes: number): TimeOfDay {
   return { hour, minute };
 }
 
-function maxFittingGlassCount(spanMinutes: number, wanted: number): number {
+function maxFittingGlassCount(
+  spanMinutes: number,
+  wanted: number,
+  pinFirstToStart: boolean,
+): number {
   if (wanted <= 0) return 0;
   if (wanted === 1) return 1;
-  const maxByGap = Math.floor(spanMinutes / MIN_SLOT_GAP_MINUTES) + 1;
+  // Inclusive endpoints need one more slot than deferred interval-ends for the same gap.
+  const maxByGap = pinFirstToStart
+    ? Math.floor(spanMinutes / MIN_SLOT_GAP_MINUTES) + 1
+    : Math.floor(spanMinutes / MIN_SLOT_GAP_MINUTES);
   return Math.min(wanted, Math.max(1, maxByGap));
 }
 
-function buildEvenSlots(window: ReminderWindow, glassCount: number): TimeOfDay[] {
+/** Inclusive endpoints: first at start, last at end (Default-Plan-shaped). */
+function buildEvenSlotsPinnedToStart(window: ReminderWindow, glassCount: number): TimeOfDay[] {
   const startMinutes = timeToMinutes(window.start);
   const endMinutes = timeToMinutes(window.end);
 
@@ -73,16 +81,48 @@ function buildEvenSlots(window: ReminderWindow, glassCount: number): TimeOfDay[]
   });
 }
 
+/**
+ * Deferred interval ends: fire at start + i·span/N for i=1..N (last at end).
+ * Used when Remaining Window start was clipped by now so drinking does not schedule an imminent ping.
+ */
+function buildEvenSlotsDeferredFromStart(window: ReminderWindow, glassCount: number): TimeOfDay[] {
+  const startMinutes = timeToMinutes(window.start);
+  const endMinutes = timeToMinutes(window.end);
+
+  if (glassCount === 1) {
+    return [window.end];
+  }
+
+  const span = endMinutes - startMinutes;
+  return Array.from({ length: glassCount }, (_, index) => {
+    const minutes = startMinutes + (span * (index + 1)) / glassCount;
+    return minutesToTime(minutes);
+  });
+}
+
+export type BuildRemainingPlanSlotsOptions = {
+  /** When true, first slot is Remaining Window start. When false, first slot is deferred into the window. */
+  pinFirstToStart: boolean;
+};
+
 /** Even Glass Slots for Remaining Glasses; shrinks to fit ≥5-minute gaps. */
 export function buildRemainingPlanSlots(
   remainingGlasses: number,
   remainingWindow: ReminderWindow,
+  options: BuildRemainingPlanSlotsOptions,
 ): TimeOfDay[] {
   if (remainingGlasses <= 0) return [];
 
   const spanMinutes = timeToMinutes(remainingWindow.end) - timeToMinutes(remainingWindow.start);
-  const glassCount = maxFittingGlassCount(spanMinutes, remainingGlasses);
-  return buildEvenSlots(remainingWindow, glassCount);
+  const glassCount = maxFittingGlassCount(
+    spanMinutes,
+    remainingGlasses,
+    options.pinFirstToStart,
+  );
+  if (options.pinFirstToStart) {
+    return buildEvenSlotsPinnedToStart(remainingWindow, glassCount);
+  }
+  return buildEvenSlotsDeferredFromStart(remainingWindow, glassCount);
 }
 
 function slotDateOnDay(slot: TimeOfDay, day: Date): Date {
@@ -102,6 +142,8 @@ export type ReminderPlanFireDatesInput = {
 /**
  * Today Remaining Plan fire times (if any) plus tomorrow's Default Plan.
  * Empty today when goal is met or Reminder Window has ended.
+ * When Remaining Window is clipped by now, first today fire is deferred into the window
+ * (not at the next minute) so logging a Glass bumps the next reminder later.
  */
 export function buildReminderPlanFireDates(input: ReminderPlanFireDatesInput): Date[] {
   const fires: Date[] = [];
@@ -109,7 +151,11 @@ export function buildReminderPlanFireDates(input: ReminderPlanFireDatesInput): D
   const remainingGlasses = countRemainingGlasses(input.goalMl, input.glassMl, input.intakeMl);
   const remainingWindow = buildRemainingWindow(input.window, input.now);
   if (remainingGlasses > 0 && remainingWindow) {
-    for (const slot of buildRemainingPlanSlots(remainingGlasses, remainingWindow)) {
+    const pinFirstToStart =
+      timeToMinutes(remainingWindow.start) === timeToMinutes(input.window.start);
+    for (const slot of buildRemainingPlanSlots(remainingGlasses, remainingWindow, {
+      pinFirstToStart,
+    })) {
       fires.push(slotDateOnDay(slot, input.now));
     }
   }

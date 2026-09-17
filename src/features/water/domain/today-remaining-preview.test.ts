@@ -32,7 +32,7 @@ describe('buildTodayRemainingPreview', () => {
       remainingGlasses: 4,
       windowStart: '10:01',
       windowEnd: '17:00',
-      nextClockTime: '10:01',
+      nextClockTime: '11:46',
     });
   });
 

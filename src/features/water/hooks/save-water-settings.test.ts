@@ -62,6 +62,7 @@ describe('saveWaterSettings', () => {
     expect(mockSyncWaterReminders).toHaveBeenCalledWith(true, {
       goalMl: 2000,
       glassMl: 250,
+      intakeMl: 0,
       window: reminderWindow,
     });
   });

@@ -11,7 +11,7 @@ import { WaterProgressRing } from '@/components/water-progress-ring';
 import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTabBarBottomInset } from '@/hooks/use-tab-bar-bottom-inset';
-import { getWaterReminderUiState, type WaterReminderUiState } from '@/lib/notifications';
+import { getWaterReminderUiState, syncWaterRemindersFromState, type WaterReminderUiState } from '@/lib/notifications';
 import type { WaterSettings } from '@/lib/storage';
 import { addGlassAmount, loadWaterState, removeGlassAmount } from '@/lib/storage';
 
@@ -27,6 +27,7 @@ export default function HomeScreen() {
       const reminder = await getWaterReminderUiState(s.remindersEnabled, {
         goalMl: s.goalMl,
         glassMl: s.glassMl,
+        intakeMl: s.intakeMl,
         window: s.reminderWindow,
       });
       setState(s);
@@ -81,6 +82,7 @@ export default function HomeScreen() {
             onPress={() => {
               void (async () => {
                 await addGlassAmount(state.glassMl);
+                await syncWaterRemindersFromState();
                 refresh();
               })();
             }}>
@@ -94,6 +96,7 @@ export default function HomeScreen() {
             onPress={() => {
               void (async () => {
                 await removeGlassAmount(state.glassMl);
+                await syncWaterRemindersFromState();
                 refresh();
               })();
             }}>

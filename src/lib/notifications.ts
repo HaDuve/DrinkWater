@@ -3,15 +3,16 @@ import { Platform } from 'react-native';
 
 import {
   buildGlassSchedule,
+  dateToTimeOfDay,
   type GlassScheduleInput,
   type TimeOfDay,
 } from '@/features/water/domain/glass-schedule';
-import { buildDefaultPlanFireDates } from '@/features/water/domain/default-plan-fire-dates';
-import { pickNextGlassSlot } from '@/features/water/domain/next-glass-slot';
+import { buildReminderPlanFireDates } from '@/features/water/domain/remaining-plan';
 import i18next from '@/i18n/i18n';
+import { loadWaterState } from '@/lib/storage';
 
 const LEGACY_NOTIFICATION_ID_KEY = '@water_reminder_notification_id';
-/** Persists `{ ids, fireMs }` for the queued today+tomorrow Default Plan one-shots. */
+/** Persists `{ ids, fireMs, signature }` for the queued Remaining + tomorrow Default Plan. */
 const REMINDER_SCHEDULE_KEY = '@water_reminder_notification_ids';
 
 type NotificationsModule = typeof import('expo-notifications');
@@ -43,7 +44,9 @@ notifications?.setNotificationHandler({
   }),
 });
 
-export type WaterReminderScheduleInput = GlassScheduleInput;
+export type WaterReminderScheduleInput = GlassScheduleInput & {
+  intakeMl: number;
+};
 
 export type WaterReminderUiState =
   | { kind: 'web' }
@@ -51,6 +54,20 @@ export type WaterReminderUiState =
   | { kind: 'no_permission' }
   | { kind: 'inactive' }
   | { kind: 'active'; nextTriggerMs: number; nextSlot: TimeOfDay; slotDay: 'today' | 'tomorrow' };
+
+type PlanSignature = {
+  goalMl: number;
+  glassMl: number;
+  intakeMl: number;
+  windowStartMinutes: number;
+  windowEndMinutes: number;
+};
+
+type StoredReminderSchedule = {
+  ids: string[];
+  fireMs: number[];
+  signature: PlanSignature | null;
+};
 
 /** Trigger input for one dated glass-slot reminder. */
 export function waterReminderTriggerFromDate(
@@ -74,27 +91,40 @@ async function readStoredNotificationIds(): Promise<string[]> {
   return stored.ids;
 }
 
-type StoredReminderSchedule = {
-  ids: string[];
-  fireMs: number[];
-};
+function buildPlanSignature(input: WaterReminderScheduleInput): PlanSignature {
+  return {
+    goalMl: input.goalMl,
+    glassMl: input.glassMl,
+    intakeMl: input.intakeMl,
+    windowStartMinutes: input.window.start.hour * 60 + input.window.start.minute,
+    windowEndMinutes: input.window.end.hour * 60 + input.window.end.minute,
+  };
+}
 
-function fireMsListsEqual(actual: number[], expected: number[]): boolean {
-  if (actual.length !== expected.length) return false;
-  const sortedActual = [...actual].sort((a, b) => a - b);
-  const sortedExpected = [...expected].sort((a, b) => a - b);
-  return sortedActual.every((ms, index) => ms === sortedExpected[index]);
+function planSignaturesEqual(
+  actual: PlanSignature | null,
+  expected: PlanSignature,
+): boolean {
+  if (!actual) return false;
+  return (
+    actual.goalMl === expected.goalMl &&
+    actual.glassMl === expected.glassMl &&
+    actual.intakeMl === expected.intakeMl &&
+    actual.windowStartMinutes === expected.windowStartMinutes &&
+    actual.windowEndMinutes === expected.windowEndMinutes
+  );
 }
 
 async function readStoredReminderSchedule(): Promise<StoredReminderSchedule> {
   const raw = await AsyncStorage.getItem(REMINDER_SCHEDULE_KEY);
-  if (!raw) return { ids: [], fireMs: [] };
+  if (!raw) return { ids: [], fireMs: [], signature: null };
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (Array.isArray(parsed)) {
       return {
         ids: parsed.filter((id): id is string => typeof id === 'string'),
         fireMs: [],
+        signature: null,
       };
     }
     if (
@@ -109,11 +139,22 @@ async function readStoredReminderSchedule(): Promise<StoredReminderSchedule> {
       const fireMs = (parsed as { fireMs: unknown[] }).fireMs.filter(
         (ms): ms is number => typeof ms === 'number',
       );
-      return { ids, fireMs };
+      const signatureRaw = (parsed as { signature?: unknown }).signature;
+      const signature =
+        signatureRaw !== null &&
+        typeof signatureRaw === 'object' &&
+        typeof (signatureRaw as PlanSignature).goalMl === 'number' &&
+        typeof (signatureRaw as PlanSignature).glassMl === 'number' &&
+        typeof (signatureRaw as PlanSignature).intakeMl === 'number' &&
+        typeof (signatureRaw as PlanSignature).windowStartMinutes === 'number' &&
+        typeof (signatureRaw as PlanSignature).windowEndMinutes === 'number'
+          ? (signatureRaw as PlanSignature)
+          : null;
+      return { ids, fireMs, signature };
     }
-    return { ids: [], fireMs: [] };
+    return { ids: [], fireMs: [], signature: null };
   } catch {
-    return { ids: [], fireMs: [] };
+    return { ids: [], fireMs: [], signature: null };
   }
 }
 
@@ -122,16 +163,18 @@ async function saveStoredReminderSchedule(schedule: StoredReminderSchedule): Pro
 }
 
 /**
- * Queued Default Plan is still valid when remaining (still-future) stored fires
- * match the expected future set and those ids are still present in the OS.
- * Past one-shots may already have delivered and left the queue.
+ * Queued plan stays when the Pacing signature still matches and every still-future
+ * stored id remains in the OS queue. Opening the app mid-day is not a rebuild.
  */
-function storedScheduleMatchesOs(
+function storedScheduleStillQueued(
   stored: StoredReminderSchedule,
   scheduled: { identifier: string }[],
-  expectedFireMs: number[],
+  expectedSignature: PlanSignature,
   nowMs: number,
 ): boolean {
+  if (!planSignaturesEqual(stored.signature, expectedSignature)) {
+    return false;
+  }
   if (stored.ids.length === 0 || stored.ids.length !== stored.fireMs.length) {
     return false;
   }
@@ -140,16 +183,44 @@ function storedScheduleMatchesOs(
     .map((id, index) => ({ id, fireMs: stored.fireMs[index] }))
     .filter((entry) => entry.fireMs > nowMs);
 
-  if (!fireMsListsEqual(
-    remainingEntries.map((entry) => entry.fireMs),
-    expectedFireMs,
-  )) {
+  if (remainingEntries.length === 0) {
     return false;
   }
 
   return remainingEntries.every((entry) =>
     scheduled.some((request) => request.identifier === entry.id),
   );
+}
+
+function pickNextQueuedFire(
+  fireMs: number[],
+  now: Date,
+): { nextTriggerMs: number; nextSlot: TimeOfDay; slotDay: 'today' | 'tomorrow' } | null {
+  const nowMs = now.getTime();
+  const future = fireMs.filter((ms) => ms > nowMs).sort((a, b) => a - b);
+  if (future.length === 0) return null;
+
+  const nextTriggerMs = future[0];
+  const trigger = new Date(nextTriggerMs);
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const dayAfterStart = new Date(tomorrowStart);
+  dayAfterStart.setDate(dayAfterStart.getDate() + 1);
+
+  let slotDay: 'today' | 'tomorrow' = 'today';
+  if (nextTriggerMs >= tomorrowStart.getTime() && nextTriggerMs < dayAfterStart.getTime()) {
+    slotDay = 'tomorrow';
+  } else if (nextTriggerMs >= dayAfterStart.getTime()) {
+    slotDay = 'tomorrow';
+  }
+
+  return {
+    nextTriggerMs,
+    nextSlot: dateToTimeOfDay(trigger),
+    slotDay,
+  };
 }
 
 async function resolveWaterReminderUiState(
@@ -170,27 +241,22 @@ async function resolveWaterReminderUiState(
     if (!scheduleResult.ok) return { kind: 'inactive' };
 
     const now = new Date();
-    const expectedFireDates = buildDefaultPlanFireDates(scheduleResult.schedule.slots, now);
-    const expectedFireMs = expectedFireDates.map((date) => date.getTime());
-
     const stored = await readStoredReminderSchedule();
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const signature = buildPlanSignature(input);
 
-    if (!storedScheduleMatchesOs(stored, scheduled, expectedFireMs, now.getTime())) {
+    if (!storedScheduleStillQueued(stored, scheduled, signature, now.getTime())) {
       return { kind: 'inactive' };
     }
 
-    const hasFutureFire = expectedFireMs.some((ms) => ms > now.getTime());
-    if (!hasFutureFire) return { kind: 'inactive' };
-
-    const nextSlot = pickNextGlassSlot(scheduleResult.schedule.slots, now);
-    if (!nextSlot) return { kind: 'inactive' };
+    const next = pickNextQueuedFire(stored.fireMs, now);
+    if (!next) return { kind: 'inactive' };
 
     return {
       kind: 'active',
-      nextTriggerMs: nextSlot.triggerMs,
-      nextSlot: nextSlot.slot,
-      slotDay: nextSlot.kind,
+      nextTriggerMs: next.nextTriggerMs,
+      nextSlot: next.nextSlot,
+      slotDay: next.slotDay,
     };
   } catch {
     return { kind: 'inactive' };
@@ -258,7 +324,7 @@ export async function cancelWaterReminders(): Promise<void> {
 }
 
 /**
- * Schedules dated one-shot local notifications for today's and tomorrow's Default Plans.
+ * Schedules dated one-shots for today's Remaining Plan and tomorrow's Default Plan.
  * Cancels any previous water reminder schedule first.
  */
 export async function scheduleWaterReminders(input: WaterReminderScheduleInput): Promise<boolean> {
@@ -272,7 +338,14 @@ export async function scheduleWaterReminders(input: WaterReminderScheduleInput):
   const granted = await requestNotificationPermissions();
   if (!granted) return false;
 
-  const fireDates = buildDefaultPlanFireDates(scheduleResult.schedule.slots, new Date());
+  const now = new Date();
+  const fireDates = buildReminderPlanFireDates({
+    goalMl: input.goalMl,
+    glassMl: input.glassMl,
+    intakeMl: input.intakeMl,
+    window: input.window,
+    now,
+  });
   const ids: string[] = [];
   for (const date of fireDates) {
     const identifier = await Notifications.scheduleNotificationAsync({
@@ -288,13 +361,14 @@ export async function scheduleWaterReminders(input: WaterReminderScheduleInput):
   await saveStoredReminderSchedule({
     ids,
     fireMs: fireDates.map((date) => date.getTime()),
+    signature: buildPlanSignature(input),
   });
   return true;
 }
 
 /**
- * Applies reminder settings: schedules today + tomorrow Default Plan one-shots when enabled,
- * cancels when disabled. When reminders stay on with the same fire times, leaves the OS schedule.
+ * Applies reminder settings. Rebuilds on Pacing Event signature changes or empty queue;
+ * leaves the OS schedule when Intake and plan settings are unchanged.
  */
 export async function syncWaterReminders(
   enabled: boolean,
@@ -314,15 +388,24 @@ export async function syncWaterReminders(
   }
 
   const now = new Date();
-  const expectedFireDates = buildDefaultPlanFireDates(scheduleResult.schedule.slots, now);
-  const expectedFireMs = expectedFireDates.map((date) => date.getTime());
-
   const stored = await readStoredReminderSchedule();
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const signature = buildPlanSignature(input);
 
-  if (storedScheduleMatchesOs(stored, scheduled, expectedFireMs, now.getTime())) {
+  if (storedScheduleStillQueued(stored, scheduled, signature, now.getTime())) {
     return;
   }
 
   await scheduleWaterReminders(input);
+}
+
+/** Loads current water state and syncs the reminder plan (Pacing Event helper). */
+export async function syncWaterRemindersFromState(): Promise<void> {
+  const state = await loadWaterState();
+  await syncWaterReminders(state.remindersEnabled, {
+    goalMl: state.goalMl,
+    glassMl: state.glassMl,
+    intakeMl: state.intakeMl,
+    window: state.reminderWindow,
+  });
 }

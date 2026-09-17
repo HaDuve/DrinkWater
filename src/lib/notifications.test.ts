@@ -179,7 +179,7 @@ describe('syncWaterReminders', () => {
     jest.useRealTimers();
   });
 
-  it('keeps the queued plan after a Glass Slot time passes without rescheduling', async () => {
+  it('leaves still-future queued slots after a Glass Slot time passes without rescheduling', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date(2026, 8, 2, 7, 0, 0));
 
@@ -303,6 +303,79 @@ describe('syncWaterReminders', () => {
 
     expect(mockScheduleNotificationAsync).not.toHaveBeenCalled();
     expect(mockCancelScheduledNotificationAsync).not.toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
+  it('rebuilds today and tomorrow Default Plans when a new calendar day starts with unchanged Intake', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 2, 7, 0, 0));
+
+    await syncWaterReminders(true, defaultScheduleInput);
+    const scheduledOnDayOne = mockScheduleNotificationAsync.mock.calls.map(([request], index) => ({
+      identifier: `id-${index + 1}`,
+      trigger: request.trigger,
+      fireMs: (request.trigger as { date: Date }).date.getTime(),
+    }));
+    const nextDayStartMs = new Date(2026, 8, 3, 0, 0, 0).getTime();
+    const stillQueued = scheduledOnDayOne.filter((request) => request.fireMs > nextDayStartMs);
+    mockGetAllScheduledNotificationsAsync.mockResolvedValue(
+      stillQueued.map(({ identifier, trigger }) => ({ identifier, trigger })),
+    );
+    mockScheduleNotificationAsync.mockClear();
+    mockCancelScheduledNotificationAsync.mockClear();
+
+    jest.setSystemTime(new Date(2026, 8, 3, 7, 0, 0));
+    await syncWaterReminders(true, defaultScheduleInput);
+
+    expect(mockCancelScheduledNotificationAsync).toHaveBeenCalled();
+    expect(mockScheduleNotificationAsync.mock.calls.map(([request]) => request.trigger)).toEqual([
+      ...expectedDefaultSlots.map((slot) => ({
+        type: 'date',
+        date: new Date(2026, 8, 3, slot.hour, slot.minute, 0, 0),
+      })),
+      ...expectedDefaultSlots.map((slot) => ({
+        type: 'date',
+        date: new Date(2026, 8, 4, slot.hour, slot.minute, 0, 0),
+      })),
+    ]);
+
+    jest.useRealTimers();
+  });
+
+  it('rebuilds Remaining Plan after undoing a Glass drops Intake below the Daily Goal', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 2, 10, 0, 0));
+
+    await syncWaterReminders(true, {
+      goalMl: 500,
+      glassMl: 250,
+      intakeMl: 500,
+      window: defaultWindow,
+    });
+    const previousIds = mockScheduleNotificationAsync.mock.calls.map((_, index) => `id-${index + 1}`);
+    mockGetAllScheduledNotificationsAsync.mockResolvedValue(
+      previousIds.map((identifier) => ({
+        identifier,
+        trigger: { type: 'timeInterval', seconds: 60, repeats: false },
+      })),
+    );
+    mockScheduleNotificationAsync.mockClear();
+    mockCancelScheduledNotificationAsync.mockClear();
+
+    await syncWaterReminders(true, {
+      goalMl: 500,
+      glassMl: 250,
+      intakeMl: 250,
+      window: defaultWindow,
+    });
+
+    expect(mockCancelScheduledNotificationAsync).toHaveBeenCalled();
+    expect(mockScheduleNotificationAsync.mock.calls.map(([request]) => request.trigger)).toEqual([
+      { type: 'date', date: new Date(2026, 8, 2, 17, 0, 0, 0) },
+      { type: 'date', date: new Date(2026, 8, 3, 8, 30, 0, 0) },
+      { type: 'date', date: new Date(2026, 8, 3, 17, 0, 0, 0) },
+    ]);
 
     jest.useRealTimers();
   });

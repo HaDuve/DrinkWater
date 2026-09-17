@@ -61,6 +61,8 @@ type PlanSignature = {
   intakeMl: number;
   windowStartMinutes: number;
   windowEndMinutes: number;
+  /** Local calendar day the plan was built for (YYYY-MM-DD). */
+  planDate: string;
 };
 
 type StoredReminderSchedule = {
@@ -91,13 +93,21 @@ async function readStoredNotificationIds(): Promise<string[]> {
   return stored.ids;
 }
 
-function buildPlanSignature(input: WaterReminderScheduleInput): PlanSignature {
+function localPlanDate(now: Date): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function buildPlanSignature(input: WaterReminderScheduleInput, now: Date): PlanSignature {
   return {
     goalMl: input.goalMl,
     glassMl: input.glassMl,
     intakeMl: input.intakeMl,
     windowStartMinutes: input.window.start.hour * 60 + input.window.start.minute,
     windowEndMinutes: input.window.end.hour * 60 + input.window.end.minute,
+    planDate: localPlanDate(now),
   };
 }
 
@@ -111,7 +121,8 @@ function planSignaturesEqual(
     actual.glassMl === expected.glassMl &&
     actual.intakeMl === expected.intakeMl &&
     actual.windowStartMinutes === expected.windowStartMinutes &&
-    actual.windowEndMinutes === expected.windowEndMinutes
+    actual.windowEndMinutes === expected.windowEndMinutes &&
+    actual.planDate === expected.planDate
   );
 }
 
@@ -147,7 +158,8 @@ async function readStoredReminderSchedule(): Promise<StoredReminderSchedule> {
         typeof (signatureRaw as PlanSignature).glassMl === 'number' &&
         typeof (signatureRaw as PlanSignature).intakeMl === 'number' &&
         typeof (signatureRaw as PlanSignature).windowStartMinutes === 'number' &&
-        typeof (signatureRaw as PlanSignature).windowEndMinutes === 'number'
+        typeof (signatureRaw as PlanSignature).windowEndMinutes === 'number' &&
+        typeof (signatureRaw as PlanSignature).planDate === 'string'
           ? (signatureRaw as PlanSignature)
           : null;
       return { ids, fireMs, signature };
@@ -243,7 +255,7 @@ async function resolveWaterReminderUiState(
     const now = new Date();
     const stored = await readStoredReminderSchedule();
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    const signature = buildPlanSignature(input);
+    const signature = buildPlanSignature(input, now);
 
     if (!storedScheduleStillQueued(stored, scheduled, signature, now.getTime())) {
       return { kind: 'inactive' };
@@ -361,7 +373,7 @@ export async function scheduleWaterReminders(input: WaterReminderScheduleInput):
   await saveStoredReminderSchedule({
     ids,
     fireMs: fireDates.map((date) => date.getTime()),
-    signature: buildPlanSignature(input),
+    signature: buildPlanSignature(input, now),
   });
   return true;
 }
@@ -390,7 +402,7 @@ export async function syncWaterReminders(
   const now = new Date();
   const stored = await readStoredReminderSchedule();
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  const signature = buildPlanSignature(input);
+  const signature = buildPlanSignature(input, now);
 
   if (storedScheduleStillQueued(stored, scheduled, signature, now.getTime())) {
     return;

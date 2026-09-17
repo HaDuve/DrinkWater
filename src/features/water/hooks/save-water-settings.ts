@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import type { GlassScheduleError, ReminderWindow } from '@/features/water/domain/glass-schedule';
 import { syncWaterReminders } from '@/lib/notifications';
 import {
+  loadWaterState,
   saveGlassMl,
   saveGoalMl,
   saveReminderWindow,
@@ -39,12 +40,14 @@ export async function saveWaterSettings(
     return windowResult;
   }
 
+  const current = await loadWaterState();
   await saveGoalMl(goalMl);
   await saveGlassMl(glassMl);
   await saveRemindersEnabled(remindersEnabled);
   await syncWaterReminders(remindersEnabled, {
     goalMl,
     glassMl,
+    intakeMl: current.intakeMl,
     window: reminderWindow,
   });
 

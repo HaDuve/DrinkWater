@@ -5,7 +5,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import { buildNextGlassReminderBody } from '@/features/water/components/next-glass-reminder-copy';
+import { buildHomeReminderBody } from '@/features/water/components/next-glass-reminder-copy';
+import type { TodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { useTheme } from '@/hooks/use-theme';
 import type { WaterReminderUiState } from '@/lib/notifications';
 
@@ -14,9 +15,10 @@ const ACTIVE_DOT = '#22c55e';
 
 type Props = {
   status: WaterReminderUiState;
+  todayPreview?: TodayRemainingPreview | null;
 };
 
-export function WaterReminderInfo({ status }: Props) {
+export function WaterReminderInfo({ status, todayPreview }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [, setTick] = useState(0);
@@ -29,10 +31,11 @@ export function WaterReminderInfo({ status }: Props) {
 
   const reminderBody =
     status.kind === 'active'
-      ? buildNextGlassReminderBody(
+      ? buildHomeReminderBody(
           status.nextSlot,
           status.slotDay,
           status.nextTriggerMs - Date.now(),
+          todayPreview,
           t,
         )
       : null;

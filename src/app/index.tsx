@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { ThemedView } from '@/components/themed-view';
 import { WaterProgressRing } from '@/components/water-progress-ring';
 import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { useTabBarBottomInset } from '@/hooks/use-tab-bar-bottom-inset';
 import { getWaterReminderUiState, syncWaterRemindersFromState, type WaterReminderUiState } from '@/lib/notifications';
 import type { WaterSettings } from '@/lib/storage';
@@ -40,6 +41,17 @@ export default function HomeScreen() {
       refresh();
     }, [refresh]),
   );
+
+  const todayPreview = useMemo(() => {
+    if (!state) return null;
+    return buildTodayRemainingPreview({
+      goalMl: state.goalMl,
+      glassMl: state.glassMl,
+      intakeMl: state.intakeMl,
+      window: state.reminderWindow,
+      now: new Date(),
+    });
+  }, [state]);
 
   if (!state) {
     return <ScreenLoadingState />;
@@ -74,7 +86,9 @@ export default function HomeScreen() {
           }
         />
 
-        {reminderStatus ? <WaterReminderInfo status={reminderStatus} /> : null}
+        {reminderStatus ? (
+          <WaterReminderInfo status={reminderStatus} todayPreview={todayPreview} />
+        ) : null}
 
         <View style={styles.actions}>
           <Pressable

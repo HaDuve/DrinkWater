@@ -29,6 +29,10 @@ export const de: TranslationResources = {
       "{{count}} Gläser zwischen {{start}} und {{end}}",
     reminderPlanInvalid:
       "Passe Ziel, Glasmenge oder Fenster an, damit der Plan passt.",
+    todaySectionTitle: "Heute",
+    todayRemainingPreview:
+      "{{count}} Gläser übrig · {{start}}–{{end}} · nächste {{clockTime}}",
+    todayRemainingSilent: "Heute keine Erinnerungen mehr.",
     reminders: "Erinnerungen",
     save: "Einstellungen speichern",
     alertInvalidGoalTitle: "Ungültiges Ziel",
@@ -91,6 +95,10 @@ export const de: TranslationResources = {
     inactive: "Keine Erinnerung geplant.",
     nextAtToday: "Nächste Erinnerung um {{clockTime}} in {{time}}.",
     doneForToday: "Heutige Erinnerungen erledigt. Nächste um {{clockTime}} in {{time}}.",
+    remainingNextAt:
+      "{{count}} Gläser übrig · nächste um {{clockTime}} in {{time}}.",
+    remainingSilentNext:
+      "Heute keine Erinnerungen mehr. Nächste um {{clockTime}} in {{time}}.",
     linkSettings: "Einstellungen",
     linkTurnOn: "In Einstellungen aktivieren",
     linkSetup: "In Einstellungen einrichten",

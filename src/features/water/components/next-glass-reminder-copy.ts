@@ -80,3 +80,33 @@ export function buildRemainingAwareReminderBody(
     time,
   });
 }
+
+export function buildHomeReminderBody(
+  nextSlot: TimeOfDay,
+  slotDay: 'today' | 'tomorrow',
+  msFromNow: number,
+  todayPreview: TodayRemainingPreview | null | undefined,
+  t: TFunction,
+): string {
+  const clockTime = formatTimeOfDay(nextSlot);
+
+  if (todayPreview?.kind === 'active') {
+    return buildRemainingAwareReminderBody(
+      {
+        kind: 'active',
+        remainingGlasses: todayPreview.remainingGlasses,
+        nextClockTime: clockTime,
+      },
+      msFromNow,
+      t,
+    );
+  }
+
+  if (todayPreview?.kind === 'silent') {
+    return buildRemainingAwareReminderBody({ kind: 'silent' }, msFromNow, t, {
+      clockTime,
+    });
+  }
+
+  return buildNextGlassReminderBody(nextSlot, slotDay, msFromNow, t);
+}

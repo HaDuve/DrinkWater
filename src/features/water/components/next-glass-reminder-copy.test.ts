@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 import { formatTimeOfDay } from '@/features/water/domain/glass-schedule';
 
 import {
+  buildHomeReminderBody,
   buildNextGlassReminderBody,
   buildRemainingAwareReminderBody,
   formatRelativeReminderTime,
@@ -108,6 +109,58 @@ describe('buildRemainingAwareReminderBody', () => {
       ),
     ).toBe(
       'reminder.remainingSilentNext:{"clockTime":"08:30","time":"reminder.timeHoursWhole:{\\"count\\":14}"}',
+    );
+  });
+});
+
+describe('buildHomeReminderBody', () => {
+  const queuedSlot = { hour: 14, minute: 40 };
+
+  it('uses Remaining Glasses with the queued next slot clock when Today Differs', () => {
+    expect(
+      buildHomeReminderBody(
+        queuedSlot,
+        'today',
+        2 * 60 * 60_000,
+        {
+          kind: 'active',
+          remainingGlasses: 4,
+          windowStart: '13:01',
+          windowEnd: '17:00',
+          nextClockTime: '13:01',
+        },
+        mockT,
+      ),
+    ).toBe(
+      'reminder.remainingNextAt:{"count":4,"clockTime":"14:40","time":"reminder.timeHoursWhole:{\\"count\\":2}"}',
+    );
+  });
+
+  it('states silence with the queued next slot when Remaining Plan is empty', () => {
+    expect(
+      buildHomeReminderBody(
+        { hour: 8, minute: 30 },
+        'tomorrow',
+        14 * 60 * 60_000,
+        { kind: 'silent' },
+        mockT,
+      ),
+    ).toBe(
+      'reminder.remainingSilentNext:{"clockTime":"08:30","time":"reminder.timeHoursWhole:{\\"count\\":14}"}',
+    );
+  });
+
+  it('keeps the existing next-reminder line when Today does not differ', () => {
+    expect(
+      buildHomeReminderBody(
+        { hour: 8, minute: 30 },
+        'today',
+        2 * 60 * 60_000,
+        { kind: 'hidden' },
+        mockT,
+      ),
+    ).toBe(
+      'reminder.nextAtToday:{"clockTime":"08:30","time":"reminder.timeHoursWhole:{\\"count\\":2}"}',
     );
   });
 });

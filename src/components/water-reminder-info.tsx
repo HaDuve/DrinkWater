@@ -5,11 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import {
-  buildNextGlassReminderBody,
-  buildRemainingAwareReminderBody,
-} from '@/features/water/components/next-glass-reminder-copy';
-import { formatTimeOfDay } from '@/features/water/domain/glass-schedule';
+import { buildHomeReminderBody } from '@/features/water/components/next-glass-reminder-copy';
 import type { TodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { useTheme } from '@/hooks/use-theme';
 import type { WaterReminderUiState } from '@/lib/notifications';
@@ -33,39 +29,16 @@ export function WaterReminderInfo({ status, todayPreview }: Props) {
     return () => clearInterval(id);
   }, [status.kind]);
 
-  let reminderBody: string | null = null;
-  if (status.kind === 'active') {
-    const msFromNow = status.nextTriggerMs - Date.now();
-    const differs =
-      todayPreview != null &&
-      (todayPreview.kind === 'active' || todayPreview.kind === 'silent');
-
-    if (differs && todayPreview.kind === 'active') {
-      reminderBody = buildRemainingAwareReminderBody(
-        {
-          kind: 'active',
-          remainingGlasses: todayPreview.remainingGlasses,
-          nextClockTime: todayPreview.nextClockTime,
-        },
-        msFromNow,
-        t,
-      );
-    } else if (differs && todayPreview.kind === 'silent') {
-      reminderBody = buildRemainingAwareReminderBody(
-        { kind: 'silent' },
-        msFromNow,
-        t,
-        { clockTime: formatTimeOfDay(status.nextSlot) },
-      );
-    } else {
-      reminderBody = buildNextGlassReminderBody(
-        status.nextSlot,
-        status.slotDay,
-        msFromNow,
-        t,
-      );
-    }
-  }
+  const reminderBody =
+    status.kind === 'active'
+      ? buildHomeReminderBody(
+          status.nextSlot,
+          status.slotDay,
+          status.nextTriggerMs - Date.now(),
+          todayPreview,
+          t,
+        )
+      : null;
 
   const expectingNext = status.kind === 'active';
 

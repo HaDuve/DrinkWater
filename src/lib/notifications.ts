@@ -6,11 +6,13 @@ import {
   type GlassScheduleInput,
   type TimeOfDay,
 } from '@/features/water/domain/glass-schedule';
+import { buildDefaultPlanFireDates } from '@/features/water/domain/default-plan-fire-dates';
 import { pickNextGlassSlot } from '@/features/water/domain/next-glass-slot';
 import i18next from '@/i18n/i18n';
 
 const LEGACY_NOTIFICATION_ID_KEY = '@water_reminder_notification_id';
-const NOTIFICATION_IDS_KEY = '@water_reminder_notification_ids';
+/** Persists `{ ids, fireMs }` for the queued today+tomorrow Default Plan one-shots. */
+const REMINDER_SCHEDULE_KEY = '@water_reminder_notification_ids';
 
 type NotificationsModule = typeof import('expo-notifications');
 
@@ -67,28 +69,6 @@ export function waterReminderTriggerFromDate(
   };
 }
 
-function slotDateOnDay(slot: TimeOfDay, day: Date): Date {
-  const trigger = new Date(day);
-  trigger.setHours(slot.hour, slot.minute, 0, 0);
-  return trigger;
-}
-
-/** Future Glass Slot fire times for today's and tomorrow's Default Plans. */
-export function buildDefaultPlanFireDates(slots: TimeOfDay[], now: Date): Date[] {
-  const fires: Date[] = [];
-  for (const dayOffset of [0, 1]) {
-    const day = new Date(now);
-    day.setDate(day.getDate() + dayOffset);
-    for (const slot of slots) {
-      const trigger = slotDateOnDay(slot, day);
-      if (trigger.getTime() > now.getTime()) {
-        fires.push(trigger);
-      }
-    }
-  }
-  return fires;
-}
-
 async function readStoredNotificationIds(): Promise<string[]> {
   const stored = await readStoredReminderSchedule();
   return stored.ids;
@@ -99,7 +79,7 @@ type StoredReminderSchedule = {
   fireMs: number[];
 };
 
-function fireMsListsMatch(actual: number[], expected: number[]): boolean {
+function fireMsListsEqual(actual: number[], expected: number[]): boolean {
   if (actual.length !== expected.length) return false;
   const sortedActual = [...actual].sort((a, b) => a - b);
   const sortedExpected = [...expected].sort((a, b) => a - b);
@@ -107,7 +87,7 @@ function fireMsListsMatch(actual: number[], expected: number[]): boolean {
 }
 
 async function readStoredReminderSchedule(): Promise<StoredReminderSchedule> {
-  const raw = await AsyncStorage.getItem(NOTIFICATION_IDS_KEY);
+  const raw = await AsyncStorage.getItem(REMINDER_SCHEDULE_KEY);
   if (!raw) return { ids: [], fireMs: [] };
   try {
     const parsed = JSON.parse(raw) as unknown;
@@ -138,17 +118,38 @@ async function readStoredReminderSchedule(): Promise<StoredReminderSchedule> {
 }
 
 async function saveStoredReminderSchedule(schedule: StoredReminderSchedule): Promise<void> {
-  await AsyncStorage.setItem(NOTIFICATION_IDS_KEY, JSON.stringify(schedule));
+  await AsyncStorage.setItem(REMINDER_SCHEDULE_KEY, JSON.stringify(schedule));
 }
 
+/**
+ * Queued Default Plan is still valid when remaining (still-future) stored fires
+ * match the expected future set and those ids are still present in the OS.
+ * Past one-shots may already have delivered and left the queue.
+ */
 function storedScheduleMatchesOs(
   stored: StoredReminderSchedule,
   scheduled: { identifier: string }[],
   expectedFireMs: number[],
+  nowMs: number,
 ): boolean {
-  if (!fireMsListsMatch(stored.fireMs, expectedFireMs)) return false;
-  if (stored.ids.length === 0) return false;
-  return stored.ids.every((id) => scheduled.some((request) => request.identifier === id));
+  if (stored.ids.length === 0 || stored.ids.length !== stored.fireMs.length) {
+    return false;
+  }
+
+  const remainingEntries = stored.ids
+    .map((id, index) => ({ id, fireMs: stored.fireMs[index] }))
+    .filter((entry) => entry.fireMs > nowMs);
+
+  if (!fireMsListsEqual(
+    remainingEntries.map((entry) => entry.fireMs),
+    expectedFireMs,
+  )) {
+    return false;
+  }
+
+  return remainingEntries.every((entry) =>
+    scheduled.some((request) => request.identifier === entry.id),
+  );
 }
 
 async function resolveWaterReminderUiState(
@@ -175,7 +176,7 @@ async function resolveWaterReminderUiState(
     const stored = await readStoredReminderSchedule();
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
 
-    if (!storedScheduleMatchesOs(stored, scheduled, expectedFireMs)) {
+    if (!storedScheduleMatchesOs(stored, scheduled, expectedFireMs, now.getTime())) {
       return { kind: 'inactive' };
     }
 
@@ -246,7 +247,7 @@ export async function cancelWaterReminders(): Promise<void> {
   const ids = await readStoredNotificationIds();
   await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id)));
   if (ids.length > 0) {
-    await AsyncStorage.removeItem(NOTIFICATION_IDS_KEY);
+    await AsyncStorage.removeItem(REMINDER_SCHEDULE_KEY);
   }
 
   const legacyId = await AsyncStorage.getItem(LEGACY_NOTIFICATION_ID_KEY);
@@ -312,13 +313,14 @@ export async function syncWaterReminders(
     return;
   }
 
-  const expectedFireDates = buildDefaultPlanFireDates(scheduleResult.schedule.slots, new Date());
+  const now = new Date();
+  const expectedFireDates = buildDefaultPlanFireDates(scheduleResult.schedule.slots, now);
   const expectedFireMs = expectedFireDates.map((date) => date.getTime());
 
   const stored = await readStoredReminderSchedule();
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
 
-  if (storedScheduleMatchesOs(stored, scheduled, expectedFireMs)) {
+  if (storedScheduleMatchesOs(stored, scheduled, expectedFireMs, now.getTime())) {
     return;
   }
 

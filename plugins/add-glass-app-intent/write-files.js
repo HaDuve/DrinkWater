@@ -3,12 +3,14 @@ const path = require('path');
 
 const {
   buildAddGlassIntentSwift,
-  buildAppShortcutsXcstrings,
+  buildAppShortcutsStrings,
   buildDrinkWaterAppShortcutsSwift,
   buildLocalizableXcstrings,
 } = require('./sources');
 
-/** Writes tracked App Intent Swift + string catalogs into the generated iOS app folder. */
+const APP_SHORTCUT_LOCALES = ['en', 'de'];
+
+/** Writes tracked App Intent Swift + localized App Shortcuts / Localizable catalogs. */
 function writeAddGlassAppIntentFiles({ nativeProjectRoot, projectName }) {
   const appDir = path.join(nativeProjectRoot, projectName);
 
@@ -18,8 +20,24 @@ function writeAddGlassAppIntentFiles({ nativeProjectRoot, projectName }) {
     buildDrinkWaterAppShortcutsSwift(),
     'utf8'
   );
-  fs.writeFileSync(path.join(appDir, 'AppShortcuts.xcstrings'), buildAppShortcutsXcstrings(), 'utf8');
+
+  for (const locale of APP_SHORTCUT_LOCALES) {
+    const lprojDir = path.join(appDir, `${locale}.lproj`);
+    fs.mkdirSync(lprojDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(lprojDir, 'AppShortcuts.strings'),
+      buildAppShortcutsStrings(locale),
+      'utf8'
+    );
+  }
+
+  // Drop legacy catalog if a prior prebuild wrote it (iOS 17+ only; breaks 15.1 builds).
+  const legacyCatalog = path.join(appDir, 'AppShortcuts.xcstrings');
+  if (fs.existsSync(legacyCatalog)) {
+    fs.unlinkSync(legacyCatalog);
+  }
+
   fs.writeFileSync(path.join(appDir, 'Localizable.xcstrings'), buildLocalizableXcstrings(), 'utf8');
 }
 
-module.exports = { writeAddGlassAppIntentFiles };
+module.exports = { writeAddGlassAppIntentFiles, APP_SHORTCUT_LOCALES };

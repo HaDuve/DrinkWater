@@ -2,7 +2,7 @@ import {
   ADD_GLASS_DEEP_LINK,
   APP_SHORTCUT_PHRASES,
   buildAddGlassIntentSwift,
-  buildAppShortcutsXcstrings,
+  buildAppShortcutsStrings,
   buildDrinkWaterAppShortcutsSwift,
   buildLocalizableXcstrings,
 } from './sources';
@@ -31,13 +31,13 @@ describe('Add Glass App Intent sources', () => {
     }
   });
 
-  it('localizes App Shortcut phrases for German in AppShortcuts.xcstrings', () => {
-    const catalog = JSON.parse(buildAppShortcutsXcstrings());
+  it('localizes App Shortcut phrases for German in AppShortcuts.strings', () => {
+    const enStrings = buildAppShortcutsStrings('en');
+    const deStrings = buildAppShortcutsStrings('de');
 
-    expect(catalog.sourceLanguage).toBe('en');
     for (const { en, de } of APP_SHORTCUT_PHRASES) {
-      expect(catalog.strings[en].localizations.en.stringUnit.value).toBe(en);
-      expect(catalog.strings[en].localizations.de.stringUnit.value).toBe(de);
+      expect(enStrings).toContain(`"${en}" = "${en}";`);
+      expect(deStrings).toContain(`"${en}" = "${de}";`);
     }
   });
 

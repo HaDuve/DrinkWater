@@ -83,21 +83,20 @@ function localizedStringEntry(en, de) {
   };
 }
 
-/** Single string catalog — avoids PBX basename collisions from en/de AppShortcuts.strings. */
-function buildAppShortcutsXcstrings() {
-  const strings = Object.fromEntries(
-    APP_SHORTCUT_PHRASES.map(({ en, de }) => [en, localizedStringEntry(en, de)])
-  );
+function escapeStringsValue(value) {
+  return value.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+}
 
-  return `${JSON.stringify(
-    {
-      sourceLanguage: 'en',
-      strings,
-      version: '1.0',
-    },
-    null,
-    2
-  )}\n`;
+/**
+ * AppShortcuts.strings per locale — required when deployment target is below iOS 17
+ * (AppShortcuts.xcstrings is iOS 17+ only). Keys are the English development phrases.
+ */
+function buildAppShortcutsStrings(locale) {
+  const lines = APP_SHORTCUT_PHRASES.map(({ en, de }) => {
+    const value = locale === 'de' ? de : en;
+    return `"${escapeStringsValue(en)}" = "${escapeStringsValue(value)}";`;
+  });
+  return `${lines.join('\n')}\n`;
 }
 
 /** Titles / shortTitle use LocalizedStringResource → Localizable.xcstrings. */
@@ -121,6 +120,6 @@ module.exports = {
   APP_SHORTCUT_PHRASES,
   buildAddGlassIntentSwift,
   buildDrinkWaterAppShortcutsSwift,
-  buildAppShortcutsXcstrings,
+  buildAppShortcutsStrings,
   buildLocalizableXcstrings,
 };

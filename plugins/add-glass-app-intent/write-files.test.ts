@@ -22,6 +22,7 @@ describe('writeAddGlassAppIntentFiles', () => {
     const localizablePath = path.join(appDir, 'Localizable.xcstrings');
 
     expect(fs.readFileSync(intentPath, 'utf8')).toContain('drinkwater://add-glass');
+    expect(fs.readFileSync(intentPath, 'utf8')).toContain('pending-add-glass.url');
     expect(fs.readFileSync(shortcutsPath, 'utf8')).toContain('AppShortcutsProvider');
     expect(fs.existsSync(path.join(appDir, 'AppShortcuts.xcstrings'))).toBe(false);
     expect(fs.readFileSync(enStringsPath, 'utf8')).toContain(

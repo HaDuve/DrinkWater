@@ -20,6 +20,14 @@ describe('Add Glass App Intent sources', () => {
     expect(swift).not.toContain('OpenURLIntent');
   });
 
+  it('writes a document-directory handoff for Intent cold start', () => {
+    const swift = buildAddGlassIntentSwift();
+
+    expect(swift).toContain('pending-add-glass.url');
+    expect(swift).toContain('writePendingAddGlassHandoff');
+    expect(swift).toContain('.documentDirectory');
+  });
+
   it('registers English App Shortcut phrases for Siri discovery', () => {
     const swift = buildDrinkWaterAppShortcutsSwift();
 

@@ -62,3 +62,41 @@ export const Spacing = {
 } as const;
 
 export const MaxContentWidth = 800;
+
+/**
+ * Water-material palette (expand beside Colors).
+ * Home opts in first; History/Settings keep Colors until a later pass.
+ * Skia liquid shaders need a development client rebuild — not Expo Go alone.
+ */
+export const WaterMaterial = {
+  light: {
+    surface: '#E8F4FC',
+    surfaceDeep: '#D0E8F7',
+    water: '#1A7ABF',
+    waterDeep: '#0D4F7A',
+    foam: '#F2FAFF',
+    caustic: '#5EB8E8',
+    ink: '#0A2A3D',
+    mist: '#60646C',
+  },
+  dark: {
+    surface: '#0A1620',
+    surfaceDeep: '#061018',
+    water: '#3DA9E8',
+    waterDeep: '#1A6FA8',
+    foam: '#B8E0F5',
+    caustic: '#6EC4F0',
+    ink: '#E8F4FC',
+    mist: '#8A9AAB',
+  },
+} as const;
+
+export type WaterMaterialColor = keyof typeof WaterMaterial.light;
+
+/** Motion params for idle shimmer / fill / splash (ms). Honor reduced motion at call sites. */
+export const WaterMotion = {
+  idleShimmerPeriodMs: 4200,
+  fillSpringMs: 420,
+  splashMs: 280,
+  celebrateMs: 640,
+} as const;

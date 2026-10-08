@@ -1,11 +1,8 @@
 import type { TranslationResources } from "./en";
 
 export const de: TranslationResources = {
-  tabs: {
-    home: "Start",
-    history: "Verlauf",
-    settings: "Einstellungen",
-    docs: "Doku",
+  common: {
+    back: "Zurück",
   },
   brand: {
     name: "DrinkWater",
@@ -23,6 +20,12 @@ export const de: TranslationResources = {
     intakeGoal: "{{intake}} / {{goal}} ml",
     intakeGoalTop: "{{intake}} /",
     intakeGoalBottom: "{{goal}} ml",
+    openSettings: "Einstellungen öffnen",
+    weekTeaserTitle: "Diese Woche",
+    weekTeaserEmpty: "Gläser eintragen, um Trends zu sehen",
+    weekTeaserSummary: "{{hitDays}}/{{totalDays}} Ziele · ø {{averageMl}} ml",
+    weekTeaserAction: "Verlauf ansehen",
+    weekTeaserHint: "Öffnet den Verlauf",
   },
   settings: {
     title: "Einstellungen",
@@ -73,7 +76,7 @@ export const de: TranslationResources = {
     previousDays: "Vergangene Tage",
     empty: "Noch keine Trinkhistorie vorhanden.",
     emptyTitle: "Noch keine Historie",
-    emptyHint: "Trage auf Start dein erstes Glas ein, um den Verlauf zu sehen.",
+    emptyHint: "Trage dein erstes Glas ein, um den Verlauf zu sehen.",
     lowHistoryHint: "Erfasse noch ein paar Tage, dann werden Trends klarer.",
     periodSummaryTitle: "Zeitraum-Übersicht",
     hitRate: "Ziel erreicht",

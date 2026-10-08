@@ -14,7 +14,7 @@ import {
   type TimeOfDay,
 } from '@/features/water/domain/glass-schedule';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useTheme } from '@/hooks/use-theme';
+import { useWaterMaterial } from '@/hooks/use-water-material';
 
 type ActiveField = 'start' | 'end' | null;
 
@@ -35,7 +35,7 @@ function PickerSlot({
   onDismiss,
   onChange,
 }: PickerSlotProps) {
-  const theme = useTheme();
+  const water = useWaterMaterial();
   const colorScheme = useColorScheme();
 
   const handleChange = (event: DateTimePickerEvent, date?: Date) => {
@@ -49,8 +49,8 @@ function PickerSlot({
   const slotStyle = [
     styles.slot,
     {
-      borderColor: active ? '#208AEF' : theme.backgroundElement,
-      backgroundColor: theme.backgroundElement,
+      borderColor: active ? water.water : water.surfaceDeep,
+      backgroundColor: water.surfaceDeep,
     },
   ];
 
@@ -69,7 +69,7 @@ function PickerSlot({
             borderWidth: 0,
             backgroundColor: 'transparent',
             fontSize: 16,
-            color: theme.text,
+            color: water.ink,
             width: '100%',
             textAlign: 'center',
           }}
@@ -86,7 +86,7 @@ function PickerSlot({
           mode="time"
           display="compact"
           themeVariant={colorScheme === 'dark' ? 'dark' : 'light'}
-          accentColor="#208AEF"
+          accentColor={water.water}
           onChange={(_, date) => {
             if (date) onChange(dateToTimeOfDay(date));
           }}
@@ -98,12 +98,12 @@ function PickerSlot({
   return (
     <View style={slotStyle}>
       <Pressable
-        onPress={onPress}
+        role="button"
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [styles.androidPressable, pressed && styles.pressed]}
-      >
-        <ThemedText>{formatTimeOfDay(value)}</ThemedText>
+        onPress={onPress}
+        style={({ pressed }) => [styles.androidPressable, pressed && styles.pressed]}>
+        <ThemedText style={{ color: water.ink }}>{formatTimeOfDay(value)}</ThemedText>
       </Pressable>
       {active ? (
         <DateTimePicker
@@ -112,7 +112,7 @@ function PickerSlot({
           is24Hour
           display="default"
           themeVariant={colorScheme === 'dark' ? 'dark' : 'light'}
-          accentColor="#208AEF"
+          accentColor={water.water}
           onChange={handleChange}
         />
       ) : null}
@@ -139,12 +139,14 @@ export function ReminderWindowTimeInput({
   startAccessibilityLabel,
   endAccessibilityLabel,
 }: Props) {
-  const theme = useTheme();
+  const water = useWaterMaterial();
   const [activeField, setActiveField] = useState<ActiveField>(null);
 
   return (
     <View style={styles.field}>
-      <ThemedText type="smallBold">{label}</ThemedText>
+      <ThemedText type="smallBold" style={{ color: water.ink }}>
+        {label}
+      </ThemedText>
       <View style={styles.row}>
         <PickerSlot
           value={start}
@@ -154,9 +156,7 @@ export function ReminderWindowTimeInput({
           onDismiss={() => setActiveField(null)}
           onChange={onStartChange}
         />
-        <ThemedText style={[styles.separator, { color: theme.textSecondary }]}>
-          --
-        </ThemedText>
+        <ThemedText style={[styles.separator, { color: water.mist }]}>--</ThemedText>
         <PickerSlot
           value={end}
           active={activeField === 'end'}
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   slot: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     borderWidth: 1,
     borderRadius: Spacing.two,
     alignItems: 'center',
@@ -193,12 +193,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.two,
+    minHeight: 48,
   },
   separator: {
     fontSize: 16,
     flexShrink: 0,
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.7,
   },
 });

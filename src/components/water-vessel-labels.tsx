@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, type TextProps } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
+import { StrokedText } from '@/components/stroked-text';
 import { Spacing } from '@/constants/theme';
 import { useWaterMaterial } from '@/hooks/use-water-material';
 
@@ -11,21 +11,9 @@ type Props = {
   sublabel?: string;
 };
 
-const OUTLINE_OFFSETS: Array<[number, number]> = [
-  [-1.5, 0],
-  [1.5, 0],
-  [0, -1.5],
-  [0, 1.5],
-  [-1.2, -1.2],
-  [1.2, -1.2],
-  [-1.2, 1.2],
-  [1.2, 1.2],
-];
-
-type StrokedLineProps = {
+type VesselLineProps = {
   children: string;
   fill: string;
-  outline: string;
   type: 'subtitle' | 'small';
   style?: TextProps['style'];
   numberOfLines?: number;
@@ -34,30 +22,18 @@ type StrokedLineProps = {
   maxFontSizeMultiplier?: number;
 };
 
-function StrokedVesselLine({
+function VesselLine({
   children,
   fill,
   outline,
   type,
   style,
   ...textProps
-}: StrokedLineProps) {
+}: VesselLineProps & { outline: string }) {
   return (
-    <View style={styles.strokeWrap}>
-      {OUTLINE_OFFSETS.map(([x, y]) => (
-        <ThemedText
-          key={`${x}:${y}`}
-          type={type}
-          style={[style, styles.strokeLayer, { color: outline, left: x, top: y }]}
-          {...textProps}
-          accessible={false}>
-          {children}
-        </ThemedText>
-      ))}
-      <ThemedText type={type} style={[style, styles.fillLayer, { color: fill }]} {...textProps}>
-        {children}
-      </ThemedText>
-    </View>
+    <StrokedText type={type} fill={fill} outline={outline} style={style} {...textProps}>
+      {children}
+    </StrokedText>
   );
 }
 
@@ -67,40 +43,41 @@ function StrokedVesselLine({
  */
 export function WaterVesselLabels({ intakeLine, goalLine, sublabel }: Props) {
   const water = useWaterMaterial();
+  const outline = water.strokeOutline;
 
   return (
     <View style={styles.labelBlock} accessible={false} pointerEvents="none">
-      <StrokedVesselLine
+      <VesselLine
         type="subtitle"
         fill={water.foam}
-        outline="#000000"
+        outline={outline}
         style={[styles.lineText, styles.tabular]}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.75}
         maxFontSizeMultiplier={1.5}>
         {intakeLine}
-      </StrokedVesselLine>
-      <StrokedVesselLine
+      </VesselLine>
+      <VesselLine
         type="subtitle"
         fill={water.foam}
-        outline="#000000"
+        outline={outline}
         style={[styles.lineText, styles.tabular]}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.75}
         maxFontSizeMultiplier={1.5}>
         {goalLine}
-      </StrokedVesselLine>
+      </VesselLine>
       {sublabel ? (
-        <StrokedVesselLine
+        <VesselLine
           type="small"
           fill={water.foam}
-          outline="#000000"
+          outline={outline}
           style={styles.sublabel}
           maxFontSizeMultiplier={1.5}>
           {sublabel}
-        </StrokedVesselLine>
+        </VesselLine>
       ) : null}
     </View>
   );
@@ -115,17 +92,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
     gap: Spacing.half,
-  },
-  strokeWrap: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  strokeLayer: {
-    position: 'absolute',
-  },
-  fillLayer: {
-    position: 'relative',
   },
   lineText: {
     textAlign: 'center',

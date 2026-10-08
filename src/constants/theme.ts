@@ -65,7 +65,7 @@ export const MaxContentWidth = 800;
 
 /**
  * Water-material palette (expand beside Colors).
- * Home opts in first; History/Settings keep Colors until a later pass.
+ * Home / History / Settings share this surface + accent system.
  * Skia liquid shaders need a development client rebuild — not Expo Go alone.
  */
 export const WaterMaterial = {
@@ -75,19 +75,31 @@ export const WaterMaterial = {
     water: '#1A7ABF',
     waterDeep: '#0D4F7A',
     foam: '#F2FAFF',
+    /** Labels on water / danger fills (AA in light + dark). */
+    onWater: '#F2FAFF',
+    /** Dark outline behind stroked foam/onWater glyphs. */
+    strokeOutline: '#000000',
     caustic: '#5EB8E8',
     ink: '#0A2A3D',
     mist: '#60646C',
+    /** Undo / destructive accent (AA onWater-on-danger). */
+    danger: '#B33A2E',
   },
   dark: {
     surface: '#0A1620',
-    surfaceDeep: '#061018',
+    /** Elevated panels (cards, inputs) — lighter than surface in dark. */
+    surfaceDeep: '#1A3548',
     water: '#3DA9E8',
     waterDeep: '#1A6FA8',
     foam: '#B8E0F5',
+    /** Labels on water / danger fills (AA in light + dark). */
+    onWater: '#F2FAFF',
+    /** Dark outline behind stroked foam/onWater glyphs. */
+    strokeOutline: '#000000',
     caustic: '#6EC4F0',
     ink: '#E8F4FC',
-    mist: '#8A9AAB',
+    mist: '#95A6B8',
+    danger: '#B33A2E',
   },
 } as const;
 

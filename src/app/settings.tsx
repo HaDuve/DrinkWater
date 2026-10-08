@@ -1,6 +1,6 @@
-import { useFocusEffect } from "@react-navigation/native";
-import React, { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Keyboard,
@@ -13,35 +13,26 @@ import {
   TextInput,
   TouchableWithoutFeedback,
   View,
-} from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenLoadingState } from "@/components/screen-loading-state";
-import { ExternalLink } from "@/components/external-link";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { PRIVACY_POLICY_URL } from "@/constants/urls";
-import { MaxContentWidth, Spacing } from "@/constants/theme";
-import { formatTodayRemainingPreviewBody } from "@/features/water/components/next-glass-reminder-copy";
-import { ReminderWindowTimeInput } from "@/features/water/components/reminder-window-time-input";
-import { resolveSettingsSaveAlert } from "@/features/water/hooks/settings-save-alert";
-import { useSettingsModel } from "@/features/water/hooks/use-settings-model";
-import { useTabBarBottomInset } from "@/hooks/use-tab-bar-bottom-inset";
-import { useTheme } from "@/hooks/use-theme";
-
-/** Fraction of tab-bar core (inset minus home indicator) used as KAV offset; lower = narrower gap above keyboard. */
-const IOS_KAV_OFFSET_RATIO = 0.5;
-/** Extra nudge after ratio; ±2–4pt on device if needed. */
-const IOS_KAV_FINE_TUNE = 0;
+import { ExternalLink } from '@/components/external-link';
+import { ScreenBackButton } from '@/components/screen-back-button';
+import { ScreenLoadingState } from '@/components/screen-loading-state';
+import { StrokedText } from '@/components/stroked-text';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { PRIVACY_POLICY_URL } from '@/constants/urls';
+import { formatTodayRemainingPreviewBody } from '@/features/water/components/next-glass-reminder-copy';
+import { ReminderWindowTimeInput } from '@/features/water/components/reminder-window-time-input';
+import { resolveSettingsSaveAlert } from '@/features/water/hooks/settings-save-alert';
+import { useSettingsModel } from '@/features/water/hooks/use-settings-model';
+import { useWaterMaterial } from '@/hooks/use-water-material';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
-  const tabBarBottomInset = useTabBarBottomInset();
-  const insets = useSafeAreaInsets();
-  const theme = useTheme();
+  const water = useWaterMaterial();
   const {
     loaded,
     reminderWindow,
@@ -60,24 +51,6 @@ export default function SettingsScreen() {
     refresh,
     save,
   } = useSettingsModel();
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
-
-  useEffect(() => {
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const showSub = Keyboard.addListener(showEvent, () =>
-      setKeyboardOpen(true),
-    );
-    const hideSub = Keyboard.addListener(hideEvent, () =>
-      setKeyboardOpen(false),
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -95,9 +68,9 @@ export default function SettingsScreen() {
       }
 
       const hint = result.notificationsHint
-        ? t("settings.alertSavedNotificationsHint")
-        : t("settings.alertSavedGeneric");
-      Alert.alert(t("settings.alertSavedTitle"), hint);
+        ? t('settings.alertSavedNotificationsHint')
+        : t('settings.alertSavedGeneric');
+      Alert.alert(t('settings.alertSavedTitle'), hint);
     });
   }, [save, t]);
 
@@ -108,47 +81,45 @@ export default function SettingsScreen() {
   const inputStyle = [
     styles.input,
     {
-      color: theme.text,
-      borderColor: theme.backgroundElement,
-      backgroundColor: theme.backgroundElement,
+      color: water.ink,
+      borderColor: water.surfaceDeep,
+      backgroundColor: water.surfaceDeep,
     },
   ];
 
-  const footerBottomPad = keyboardOpen
-    ? Spacing.three
-    : tabBarBottomInset + Spacing.three;
-
-  const avoidingBehavior = Platform.select<"padding" | "height" | undefined>({
-    ios: "padding",
-    android: "height",
+  const avoidingBehavior = Platform.select<'padding' | 'height' | undefined>({
+    ios: 'padding',
+    android: 'height',
     default: undefined,
   });
-
-  const iosTabBarCore = Math.max(0, tabBarBottomInset - insets.bottom);
-  const keyboardVerticalOffset =
-    Platform.OS === "ios"
-      ? keyboardOpen
-        ? 0
-        : Math.round(iosTabBarCore * IOS_KAV_OFFSET_RATIO) + IOS_KAV_FINE_TUNE
-      : 0;
 
   const footer = (
     <View
       style={[
         styles.footer,
         {
-          paddingBottom: footerBottomPad,
-          borderTopColor: theme.backgroundElement,
+          paddingBottom: Spacing.three,
+          borderTopColor: water.surfaceDeep,
         },
-      ]}
-    >
+      ]}>
       <Pressable
-        style={({ pressed }) => [styles.saveBtn, pressed && styles.pressed]}
-        onPress={dismissAndSave}
-      >
-        <ThemedText type="smallBold" style={styles.saveBtnText}>
-          {t("settings.save")}
-        </ThemedText>
+        role="button"
+        accessibilityRole="button"
+        accessibilityLabel={t('settings.save')}
+        style={({ pressed }) => [
+          styles.saveBtn,
+          { backgroundColor: water.waterDeep },
+          pressed && styles.pressed,
+        ]}
+        onPress={dismissAndSave}>
+        <StrokedText
+          type="smallBold"
+          fill={water.onWater}
+          outline={water.strokeOutline}
+          outlineWidth={1.5}
+          style={styles.saveBtnLabel}>
+          {t('settings.save')}
+        </StrokedText>
       </Pressable>
     </View>
   );
@@ -156,85 +127,96 @@ export default function SettingsScreen() {
   const formScrollInner = (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.formInner}>
-        <ThemedText type="title" style={styles.screenTitle}>
-          {t("settings.title")}
+        <ThemedText type="title" style={[styles.screenTitle, { color: water.ink }]}>
+          {t('settings.title')}
         </ThemedText>
 
         <View style={styles.field}>
-          <ThemedText type="smallBold">{t("settings.dailyGoalMl")}</ThemedText>
+          <ThemedText type="smallBold" style={{ color: water.ink }}>
+            {t('settings.dailyGoalMl')}
+          </ThemedText>
           <TextInput
             keyboardType="number-pad"
             value={goalInput}
             onChangeText={setGoalInput}
             style={inputStyle}
             placeholder="2000"
-            placeholderTextColor={theme.textSecondary}
+            placeholderTextColor={water.mist}
+            accessibilityLabel={t('settings.dailyGoalMl')}
           />
         </View>
 
         <View style={styles.field}>
-          <ThemedText type="smallBold">{t("settings.glassSizeMl")}</ThemedText>
+          <ThemedText type="smallBold" style={{ color: water.ink }}>
+            {t('settings.glassSizeMl')}
+          </ThemedText>
           <TextInput
             keyboardType="number-pad"
             value={glassInput}
             onChangeText={setGlassInput}
             style={inputStyle}
             placeholder="250"
-            placeholderTextColor={theme.textSecondary}
+            placeholderTextColor={water.mist}
+            accessibilityLabel={t('settings.glassSizeMl')}
           />
         </View>
 
         {reminderWindow ? (
           <>
             <ReminderWindowTimeInput
-              label={t("settings.notifyTime")}
+              label={t('settings.notifyTime')}
               start={reminderWindow.start}
               end={reminderWindow.end}
               onStartChange={setWindowStart}
               onEndChange={setWindowEnd}
-              startAccessibilityLabel={t("settings.reminderWindowStart")}
-              endAccessibilityLabel={t("settings.reminderWindowEnd")}
+              startAccessibilityLabel={t('settings.reminderWindowStart')}
+              endAccessibilityLabel={t('settings.reminderWindowEnd')}
             />
 
             {preview ? (
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="small" style={{ color: water.mist }}>
                 {preview.ok
-                  ? t("settings.reminderPlanPreview", {
+                  ? t('settings.reminderPlanPreview', {
                       count: preview.glassCount,
                       start: preview.windowStart,
                       end: preview.windowEnd,
                     })
-                  : t("settings.reminderPlanInvalid")}
+                  : t('settings.reminderPlanInvalid')}
               </ThemedText>
             ) : null}
           </>
         ) : null}
 
-        <View style={styles.row}>
-          <ThemedText type="smallBold">{t("settings.reminders")}</ThemedText>
+        <View style={[styles.row, { backgroundColor: water.surfaceDeep }]}>
+          <ThemedText type="smallBold" style={{ color: water.ink }}>
+            {t('settings.reminders')}
+          </ThemedText>
           <Switch
             value={reminders}
             onValueChange={setReminders}
-            trackColor={{ false: theme.backgroundElement, true: "#208AEF" }}
+            accessibilityLabel={t('settings.reminders')}
+            trackColor={{ false: water.mist, true: water.water }}
           />
         </View>
 
-        <View style={styles.row}>
-          <ThemedText type="smallBold">{t("settings.animations")}</ThemedText>
+        <View style={[styles.row, { backgroundColor: water.surfaceDeep }]}>
+          <ThemedText type="smallBold" style={{ color: water.ink }}>
+            {t('settings.animations')}
+          </ThemedText>
           <Switch
-            accessibilityLabel={t("settings.animations")}
             value={animations}
             onValueChange={setAnimations}
-            trackColor={{ false: theme.backgroundElement, true: "#208AEF" }}
+            accessibilityLabel={t('settings.animations')}
+            trackColor={{ false: water.mist, true: water.water }}
           />
         </View>
 
-        {todayPreview && todayPreview.kind !== "hidden" ? (
-          <View style={styles.todaySection}>
-            <ThemedText type="smallBold">
-              {t("settings.todaySectionTitle")}
+        {todayPreview && todayPreview.kind !== 'hidden' ? (
+          <View style={[styles.todaySection, { backgroundColor: water.surfaceDeep }]}>
+            <ThemedText type="smallBold" style={{ color: water.ink }}>
+              {t('settings.todaySectionTitle')}
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="small" style={{ color: water.mist }}>
               {formatTodayRemainingPreviewBody(todayPreview, t)}
             </ThemedText>
           </View>
@@ -242,7 +224,9 @@ export default function SettingsScreen() {
 
         <View style={styles.legalSection}>
           <ExternalLink href={PRIVACY_POLICY_URL}>
-            <ThemedText type="linkPrimary">{t("settings.privacyPolicy")}</ThemedText>
+            <ThemedText type="linkPrimary" style={{ color: water.water }}>
+              {t('settings.privacyPolicy')}
+            </ThemedText>
           </ExternalLink>
         </View>
       </View>
@@ -250,23 +234,23 @@ export default function SettingsScreen() {
   );
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+    <ThemedView style={[styles.container, { backgroundColor: water.surface }]}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
+        <View style={styles.header}>
+          <ScreenBackButton />
+        </View>
         <KeyboardAvoidingView
           style={styles.keyboardAvoid}
           behavior={avoidingBehavior}
-          enabled={Platform.OS !== "web"}
-          keyboardVerticalOffset={keyboardVerticalOffset}
-        >
+          enabled={Platform.OS !== 'web'}
+          keyboardVerticalOffset={0}>
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.formContent}
+            contentInsetAdjustmentBehavior="never"
             keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={
-              Platform.OS === "ios" ? "interactive" : "on-drag"
-            }
-            showsVerticalScrollIndicator={false}
-          >
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            showsVerticalScrollIndicator={false}>
             {formScrollInner}
           </ScrollView>
           {footer}
@@ -279,13 +263,16 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: "row",
-    justifyContent: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   safeArea: {
     flex: 1,
-    alignSelf: "stretch",
+    alignSelf: 'stretch',
     maxWidth: MaxContentWidth,
+  },
+  header: {
+    paddingHorizontal: Spacing.two,
   },
   keyboardAvoid: {
     flex: 1,
@@ -296,6 +283,7 @@ const styles = StyleSheet.create({
   formContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
     paddingBottom: Spacing.three,
   },
   formInner: {
@@ -310,7 +298,6 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 28,
     lineHeight: 34,
-    marginTop: Spacing.two,
     marginBottom: Spacing.two,
   },
   field: {
@@ -322,30 +309,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
+    minHeight: 48,
   },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    minHeight: 48,
+    borderRadius: Spacing.three,
   },
   todaySection: {
     gap: Spacing.one,
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
   },
   legalSection: {
     paddingTop: Spacing.two,
     paddingBottom: Spacing.one,
   },
   saveBtn: {
-    backgroundColor: "#208AEF",
     paddingVertical: Spacing.three,
     borderRadius: Spacing.three,
-    alignItems: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    overflow: 'visible',
   },
-  saveBtnText: {
-    color: "#ffffff",
+  saveBtnLabel: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '700',
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.7,
   },
 });
+

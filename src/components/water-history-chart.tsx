@@ -3,9 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { useWaterMaterial } from '@/hooks/use-water-material';
 
 export type WaterHistoryChartEntry = {
   id: string;
@@ -22,7 +21,7 @@ type WaterHistoryChartProps = {
 
 export function WaterHistoryChart({ entries, goalMl }: WaterHistoryChartProps) {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const water = useWaterMaterial();
   const maxPercent = Math.max(
     120,
     ...entries.map((item) => {
@@ -37,9 +36,9 @@ export function WaterHistoryChart({ entries, goalMl }: WaterHistoryChartProps) {
   );
 
   return (
-    <ThemedView type="backgroundElement" style={styles.container}>
+    <View style={[styles.container, { backgroundColor: water.surfaceDeep }]}>
       <View style={styles.goalRow}>
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="small" style={{ color: water.mist }}>
           {t('history.goalLineLabel')}
         </ThemedText>
       </View>
@@ -50,23 +49,28 @@ export function WaterHistoryChart({ entries, goalMl }: WaterHistoryChartProps) {
           const reachedGoal = goalMl > 0 && item.intakeMl >= goalMl;
           return (
             <View key={item.id} style={styles.column}>
-              <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
-                <View style={[styles.goalLine, { bottom: `${goalLineBottomPercent}%` }]} />
+              <View style={[styles.track, { backgroundColor: water.surface }]}>
+                <View
+                  style={[
+                    styles.goalLine,
+                    { bottom: `${goalLineBottomPercent}%`, borderTopColor: water.caustic },
+                  ]}
+                />
                 <View
                   style={[
                     styles.bar,
                     {
                       height: item.intakeMl > 0 ? `${Math.max(8, Math.round(barRatio * 100))}%` : '0%',
-                      backgroundColor: reachedGoal ? '#24A148' : '#208AEF',
+                      backgroundColor: reachedGoal ? water.waterDeep : water.water,
                     },
                   ]}
                 />
               </View>
               <ThemedText
                 type="small"
-                themeColor="textSecondary"
                 style={[
                   styles.label,
+                  { color: water.mist },
                   item.labelAlign === 'center'
                     ? styles.labelCenter
                     : item.labelAlign === 'right'
@@ -81,7 +85,7 @@ export function WaterHistoryChart({ entries, goalMl }: WaterHistoryChartProps) {
           );
         })}
       </View>
-    </ThemedView>
+    </View>
   );
 }
 
@@ -119,7 +123,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     borderTopWidth: 1,
-    borderTopColor: '#FF9F1C',
     opacity: 0.9,
   },
   bar: {

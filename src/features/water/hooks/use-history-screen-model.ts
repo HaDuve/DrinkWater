@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import type { WaterHistoryChartEntry } from '@/components/water-history-chart';
 import {
   aggregateChartEntries,
   groupPastEntriesByWeek,
@@ -7,10 +8,10 @@ import {
   type HistoryRange,
   type WeeklyPastGroup,
 } from '@/features/water/domain/history';
-import type { WaterHistoryChartEntry } from '@/components/water-history-chart';
+import { buildPeriodSummary } from '@/features/water/domain/period-summary';
 import type { DailyHistoryEntry, WaterSettings } from '@/lib/storage';
 
-type PeriodSummary = {
+type HistoryPeriodSummary = {
   totalDays: number;
   hitDays: number;
   totalMl: number;
@@ -23,7 +24,7 @@ export type HistoryScreenModel = {
   todayEntry: DailyHistoryEntry;
   weeklyPastGroups: WeeklyPastGroup[];
   chartEntries: WaterHistoryChartEntry[];
-  periodSummary: PeriodSummary;
+  periodSummary: HistoryPeriodSummary;
   meaningfulDays: number;
 };
 
@@ -64,20 +65,19 @@ export function useHistoryScreenModel(
     [selectedRange, visibleHistory],
   );
 
-  const periodSummary = useMemo(() => {
-    const totalDays = visibleHistory.length;
-    const goalMl = state?.goalMl ?? 0;
-    const hitDays = visibleHistory.filter((item) => goalMl > 0 && item.intakeMl >= goalMl).length;
-    const totalMl = visibleHistory.reduce((sum, item) => sum + item.intakeMl, 0);
-    const averageMl = totalDays > 0 ? Math.round(totalMl / totalDays) : 0;
-    const hitRate = totalDays > 0 ? Math.round((hitDays / totalDays) * 100) : 0;
-    return { totalDays, hitDays, totalMl, averageMl, hitRate };
+  const { periodSummary, meaningfulDays } = useMemo(() => {
+    const summary = buildPeriodSummary(visibleHistory, state?.goalMl ?? 0);
+    return {
+      periodSummary: {
+        totalDays: summary.totalDays,
+        hitDays: summary.hitDays,
+        totalMl: summary.totalMl,
+        averageMl: summary.averageMl,
+        hitRate: summary.hitRate,
+      },
+      meaningfulDays: summary.meaningfulDays,
+    };
   }, [state?.goalMl, visibleHistory]);
-
-  const meaningfulDays = useMemo(
-    () => visibleHistory.filter((item) => item.intakeMl > 0).length,
-    [visibleHistory],
-  );
 
   return {
     visibleHistory,

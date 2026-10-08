@@ -1,9 +1,6 @@
 export const en = {
-  tabs: {
-    home: "Home",
-    history: "History",
-    settings: "Settings",
-    docs: "Docs",
+  common: {
+    back: "Back",
   },
   brand: {
     name: "DrinkWater",
@@ -18,9 +15,16 @@ export const en = {
     undoGlass: "Undo glass",
     undoGlassBusy: "Undoing…",
     undoGlassDone: "Glass undone",
+    glassActionFailed: "Couldn’t update glass. Try again.",
     intakeGoal: "{{intake}} / {{goal}} ml",
     intakeGoalTop: "{{intake}} /",
     intakeGoalBottom: "{{goal}} ml",
+    openSettings: "Open settings",
+    weekTeaserTitle: "This week",
+    weekTeaserEmpty: "Log glasses to see trends",
+    weekTeaserSummary: "{{hitDays}}/{{totalDays}} goals · avg {{averageMl}} ml",
+    weekTeaserAction: "View history",
+    weekTeaserHint: "Opens history",
   },
   settings: {
     title: "Settings",
@@ -69,7 +73,7 @@ export const en = {
     previousDays: "Previous days",
     empty: "No water intake history yet.",
     emptyTitle: "No history yet",
-    emptyHint: "Log your first glass from Home to start tracking progress.",
+    emptyHint: "Log your first glass to start tracking progress.",
     lowHistoryHint: "Keep logging for a few more days to unlock clearer trends.",
     periodSummaryTitle: "Period summary",
     hitRate: "Goal hit rate",

@@ -12,6 +12,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
+    "check:vessel-ghost": "node scripts/check-vessel-label-ghost.test.mjs",
     "version:bump": "node ./scripts/version-bump.js",
     "update:preview": "eas update --channel preview",
     "update:production": "eas update --channel production",

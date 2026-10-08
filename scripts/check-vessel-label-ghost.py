@@ -11,7 +11,8 @@ few rows of legitimate large-glyph bottom outline).
 Usage:
   python3 scripts/check-vessel-label-ghost.py <screenshot.png>
 
-Exit 0 = clean, 1 = ghost detected (or bad input).
+Exit 0 = clean (at least one conclusive mid-gap measurement, no ghost).
+Exit 1 = ghost detected, no conclusive label band, or bad input.
 """
 
 from __future__ import annotations
@@ -97,11 +98,17 @@ def mid_gap_dark_px(band: Image.Image, goal_end: int, sub_start: int | None) -> 
     return dark
 
 
-def detect_ghost(band: Image.Image) -> tuple[bool, str]:
+def detect_ghost(band: Image.Image) -> tuple[str, str]:
+    """
+    Returns (status, detail) where status is:
+      - "ghost": mid-gap ghost detected
+      - "clean": conclusive mid-gap measurement, no ghost
+      - "skip": band could not locate intake+goal foam labels
+    """
     blocks = foam_blocks(band)
     # Need intake + goal foam bodies so we know which block is the ml line.
     if len(blocks) < 2:
-        return False, f"need intake+goal foam blocks, got {blocks}"
+        return "skip", f"need intake+goal foam blocks, got {blocks}"
 
     # intake / goal [/ sublabel] — goal is second block.
     goal_end = blocks[1][1]
@@ -109,29 +116,41 @@ def detect_ghost(band: Image.Image) -> tuple[bool, str]:
 
     dark = mid_gap_dark_px(band, goal_end, sub_start)
     if dark >= GHOST_DARK_PX_MIN:
-        return True, f"ghost mid-gap under goal@{goal_end} dark_px={dark}"
-    return False, f"mid-gap dark_px={dark} (goal@{goal_end})"
+        return "ghost", f"ghost mid-gap under goal@{goal_end} dark_px={dark}"
+    return "clean", f"mid-gap dark_px={dark} (goal@{goal_end})"
 
 
-def main() -> int:
-    if len(sys.argv) != 2:
-        print("usage: check-vessel-label-ghost.py <screenshot.png>", file=sys.stderr)
-        return 1
-    path = Path(sys.argv[1])
+def check_screenshot(path: Path) -> int:
+    """Exit code: 0 clean, 1 ghost / inconclusive / bad input."""
     if not path.is_file():
         print(f"FAIL missing file: {path}", file=sys.stderr)
         return 1
 
     im = Image.open(path).convert("RGB")
     details: list[str] = []
+    conclusive = 0
     for i, band in enumerate(vessel_bands(im)):
-        found, detail = detect_ghost(band)
+        status, detail = detect_ghost(band)
         details.append(f"band{i}:{detail}")
-        if found:
+        if status == "ghost":
             print(f"FAIL ghost label text: {detail}")
             return 1
+        if status == "clean":
+            conclusive += 1
+
+    if conclusive == 0:
+        print(f"FAIL no conclusive vessel label band ({'; '.join(details)})")
+        return 1
+
     print(f"OK no vessel label ghost ({'; '.join(details)})")
     return 0
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("usage: check-vessel-label-ghost.py <screenshot.png>", file=sys.stderr)
+        return 1
+    return check_screenshot(Path(sys.argv[1]))
 
 
 if __name__ == "__main__":

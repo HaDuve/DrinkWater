@@ -28,14 +28,13 @@ type Props = {
   type?: 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary' | 'code';
   style?: TextProps['style'];
   numberOfLines?: number;
+  adjustsFontSizeToFit?: boolean;
+  minimumFontScale?: number;
   maxFontSizeMultiplier?: number;
 };
 
 /**
  * Foam (or other) fill + dark outline — same technique as vessel ml labels.
- *
- * Do not use `adjustsFontSizeToFit`: absolute outline layers desync on iOS and
- * leave a tiny dark ghost of the string under the fill.
  */
 export function StrokedText({
   children,

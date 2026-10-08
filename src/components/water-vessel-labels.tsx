@@ -17,6 +17,8 @@ type VesselLineProps = {
   type: 'subtitle' | 'small';
   style?: TextProps['style'];
   numberOfLines?: number;
+  adjustsFontSizeToFit?: boolean;
+  minimumFontScale?: number;
   maxFontSizeMultiplier?: number;
 };
 
@@ -51,6 +53,8 @@ export function WaterVesselLabels({ intakeLine, goalLine, sublabel }: Props) {
         outline={outline}
         style={[styles.lineText, styles.tabular]}
         numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
         maxFontSizeMultiplier={1.5}>
         {intakeLine}
       </VesselLine>
@@ -60,6 +64,8 @@ export function WaterVesselLabels({ intakeLine, goalLine, sublabel }: Props) {
         outline={outline}
         style={[styles.lineText, styles.tabular]}
         numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
         maxFontSizeMultiplier={1.5}>
         {goalLine}
       </VesselLine>

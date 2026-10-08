@@ -19,6 +19,8 @@ export const en = {
     undoGlassBusy: "Undoing…",
     undoGlassDone: "Glass undone",
     intakeGoal: "{{intake}} / {{goal}} ml",
+    intakeGoalTop: "{{intake}} /",
+    intakeGoalBottom: "{{goal}} ml",
   },
   settings: {
     title: "Settings",

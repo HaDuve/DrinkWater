@@ -21,6 +21,8 @@ export const de: TranslationResources = {
     undoGlassBusy: "Wird rückgängig…",
     undoGlassDone: "Glas rückgängig gemacht",
     intakeGoal: "{{intake}} / {{goal}} ml",
+    intakeGoalTop: "{{intake}} /",
+    intakeGoalBottom: "{{goal}} ml",
   },
   settings: {
     title: "Einstellungen",

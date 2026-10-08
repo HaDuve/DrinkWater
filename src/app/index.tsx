@@ -7,11 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenLoadingState } from '@/components/screen-loading-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WaterProgressRing } from '@/components/water-progress-ring';
+import { WaterLiquidVessel } from '@/components/water-liquid-vessel';
 import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { useTabBarBottomInset } from '@/hooks/use-tab-bar-bottom-inset';
+import { useWaterMaterial } from '@/hooks/use-water-material';
 import { getWaterReminderUiState, syncWaterRemindersFromState, type WaterReminderUiState } from '@/lib/notifications';
 import type { WaterSettings } from '@/lib/storage';
 import { addGlassAmount, loadWaterState, removeGlassAmount } from '@/lib/storage';
@@ -21,6 +22,7 @@ type BusyAction = 'add' | 'undo' | null;
 export default function HomeScreen() {
   const { t } = useTranslation();
   const tabBarBottomInset = useTabBarBottomInset();
+  const water = useWaterMaterial();
   const [state, setState] = useState<WaterSettings | null>(null);
   const [reminderStatus, setReminderStatus] = useState<WaterReminderUiState | null>(null);
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
@@ -89,7 +91,7 @@ export default function HomeScreen() {
   const undoBusy = busyAction === 'undo';
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, { backgroundColor: water.surface }]}>
       <SafeAreaView
         style={[styles.safeArea, { paddingBottom: tabBarBottomInset + Spacing.three }]}
         edges={['top', 'left', 'right']}>
@@ -99,13 +101,13 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           bounces>
           <View style={styles.hero}>
-            <WaterProgressRing
-              progress={progress}
+            <WaterLiquidVessel
+              intakeMl={state.intakeMl}
+              goalMl={state.goalMl}
+              busyAction={busyAction}
               size={260}
-              centerLabel={t('home.intakeGoal', {
-                intake: state.intakeMl,
-                goal: state.goalMl,
-              })}
+              intakeLine={t('home.intakeGoalTop', { intake: state.intakeMl })}
+              goalLine={t('home.intakeGoalBottom', { goal: state.goalMl })}
               sublabel={
                 progress >= 1
                   ? t('home.goalReached')
@@ -128,11 +130,12 @@ export default function HomeScreen() {
               disabled={Boolean(busyAction)}
               style={({ pressed }) => [
                 styles.primaryBtn,
+                { backgroundColor: water.water },
                 pressed && !busyAction && styles.pressed,
                 busyAction && styles.disabled,
               ]}
               onPress={() => runGlassAction('add', state.glassMl)}>
-              <ThemedText type="smallBold" style={styles.btnLightText}>
+              <ThemedText type="smallBold" style={[styles.btnLightText, { color: water.foam }]}>
                 {addBusy ? t('home.addGlassBusy') : t('home.addGlass', { ml: state.glassMl })}
               </ThemedText>
             </Pressable>
@@ -194,7 +197,6 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     alignSelf: 'stretch',
-    backgroundColor: '#208AEF',
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
     borderRadius: Spacing.three,
@@ -209,9 +211,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  btnLightText: {
-    color: '#ffffff',
-  },
+  btnLightText: {},
   pressed: {
     opacity: 0.7,
   },

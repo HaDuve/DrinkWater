@@ -1,21 +1,15 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { SymbolView } from 'expo-symbols';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenLoadingState } from '@/components/screen-loading-state';
-import { StrokedText } from '@/components/stroked-text';
-import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WaterLiquidVessel } from '@/components/water-liquid-vessel';
-import { WaterProgressRing } from '@/components/water-progress-ring';
-import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { HomeCenterBody } from '@/features/water/components/home-center-body';
 import { HomeSettingsButton } from '@/features/water/components/home-settings-button';
-import { HomeWeekTeaser } from '@/features/water/components/home-week-teaser';
-import { pickHomeVesselKind } from '@/features/water/domain/home-vessel-kind';
+import { buildHomeCenterLayoutModel } from '@/features/water/domain/home-center-layout';
 import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { buildWeekTeaserSummary } from '@/features/water/domain/week-teaser';
 import { subscribeIntakeChanged } from '@/features/water/hooks/intake-changed';
@@ -100,15 +94,15 @@ export default function HomeScreen() {
   }
 
   const weekTeaser = buildWeekTeaserSummary(weekHistory, state.goalMl);
-  const progress = state.goalMl > 0 ? state.intakeMl / state.goalMl : 0;
-  const vesselSublabel =
-    progress >= 1
-      ? t('home.goalReached')
-      : t('home.percentToGo', { percent: Math.round((1 - progress) * 100) });
-  const addBusy = busyAction === 'add';
-  const undoBusy = busyAction === 'undo';
-  const canUndo = state.intakeMl > 0;
-  const primaryLabel = addBusy ? t('home.addGlassBusy') : t('home.addGlass', { ml: state.glassMl });
+  const layout = buildHomeCenterLayoutModel({
+    intakeMl: state.intakeMl,
+    goalMl: state.goalMl,
+  });
+  const vesselSublabel = layout.goalReached
+    ? t('home.goalReached')
+    : t('home.percentToGo', { percent: Math.round((1 - layout.progress) * 100) });
+  const primaryLabel =
+    busyAction === 'add' ? t('home.addGlassBusy') : t('home.addGlass', { ml: state.glassMl });
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: water.surface }]}>
@@ -117,94 +111,18 @@ export default function HomeScreen() {
           <View style={styles.topBarSpacer} />
           <HomeSettingsButton />
         </View>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          contentInsetAdjustmentBehavior="never"
-          showsVerticalScrollIndicator={false}
-          bounces>
-          <View style={styles.hero}>
-            {pickHomeVesselKind(state.animationsEnabled) === 'liquid' ? (
-              <WaterLiquidVessel
-                intakeMl={state.intakeMl}
-                goalMl={state.goalMl}
-                busyAction={busyAction}
-                size={260}
-                intakeLine={t('home.intakeGoalTop', { intake: state.intakeMl })}
-                goalLine={t('home.intakeGoalBottom', { goal: state.goalMl })}
-                sublabel={vesselSublabel}
-              />
-            ) : (
-              <WaterProgressRing
-                progress={progress}
-                size={260}
-                intakeLine={t('home.intakeGoalTop', { intake: state.intakeMl })}
-                goalLine={t('home.intakeGoalBottom', { goal: state.goalMl })}
-                sublabel={vesselSublabel}
-              />
-            )}
-          </View>
-
-          <View style={styles.actions}>
-            <Pressable
-              role="button"
-              accessibilityRole="button"
-              accessibilityLabel={primaryLabel}
-              accessibilityState={{ disabled: Boolean(busyAction), busy: addBusy }}
-              disabled={Boolean(busyAction)}
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                canUndo && styles.primaryBtnWithUndo,
-                { backgroundColor: water.waterDeep },
-                pressed && !busyAction && styles.pressed,
-                busyAction && styles.disabled,
-              ]}
-              onPress={() => runGlassAction({ type: 'add' })}>
-              <StrokedText
-                type="smallBold"
-                fill={water.onWater}
-                outline={water.strokeOutline}
-                outlineWidth={1.5}
-                style={styles.primaryBtnLabel}>
-                {primaryLabel}
-              </StrokedText>
-            </Pressable>
-
-            {canUndo ? (
-              <Pressable
-                role="button"
-                accessibilityRole="button"
-                accessibilityLabel={t('home.undoGlass')}
-                accessibilityState={{ disabled: Boolean(busyAction), busy: undoBusy }}
-                disabled={Boolean(busyAction)}
-                style={({ pressed }) => [
-                  styles.undoBtn,
-                  { backgroundColor: water.danger },
-                  pressed && !busyAction && styles.pressed,
-                  busyAction && styles.disabled,
-                ]}
-                onPress={() => runGlassAction({ type: 'undo', amount: state.glassMl })}>
-                <SymbolView
-                  name="arrow.uturn.backward"
-                  size={20}
-                  weight="semibold"
-                  tintColor={water.onWater}
-                  fallback={
-                    <ThemedText type="smallBold" style={{ color: water.onWater }}>
-                      ↩
-                    </ThemedText>
-                  }
-                />
-              </Pressable>
-            ) : null}
-          </View>
-
-          <HomeWeekTeaser summary={weekTeaser} />
-
-          {reminderStatus ? (
-            <WaterReminderInfo status={reminderStatus} todayPreview={todayPreview} />
-          ) : null}
-        </ScrollView>
+        <HomeCenterBody
+          state={state}
+          layout={layout}
+          weekTeaser={weekTeaser}
+          reminderStatus={reminderStatus}
+          todayPreview={todayPreview}
+          vesselSublabel={vesselSublabel}
+          primaryLabel={primaryLabel}
+          busyAction={busyAction}
+          onAdd={() => runGlassAction({ type: 'add' })}
+          onUndo={() => runGlassAction({ type: 'undo', amount: state.glassMl })}
+        />
       </SafeAreaView>
     </ThemedView>
   );
@@ -229,62 +147,5 @@ const styles = StyleSheet.create({
   },
   topBarSpacer: {
     flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-    paddingBottom: Spacing.three,
-    gap: Spacing.three,
-  },
-  hero: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.three,
-    marginBottom: Spacing.three,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    alignSelf: 'stretch',
-    alignItems: 'stretch',
-  },
-  primaryBtn: {
-    flex: 1,
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.three,
-    alignItems: 'center',
-    minHeight: 48,
-    justifyContent: 'center',
-    overflow: 'visible',
-  },
-  /** Undo ≈ 20% of primary width → 5:1 flex. */
-  primaryBtnWithUndo: {
-    flex: 5,
-  },
-  primaryBtnLabel: {
-    fontSize: 17,
-    lineHeight: 22,
-    fontWeight: '700',
-  },
-  undoBtn: {
-    flex: 1,
-    borderRadius: Spacing.three,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    minWidth: 48,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  disabled: {
-    opacity: 0.5,
   },
 });

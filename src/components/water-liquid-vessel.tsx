@@ -7,13 +7,15 @@ import {
   Skia,
   vec,
 } from '@shopify/react-native-skia';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
   useDerivedValue,
   useReducedMotion,
   useSharedValue,
   withRepeat,
+  withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -43,6 +45,8 @@ uniform float2 resolution;
 uniform float fill;
 uniform float time;
 uniform float motion;
+uniform float splash;
+uniform float celebrate;
 uniform float3 water;
 uniform float3 deep;
 uniform float3 foam;
@@ -58,19 +62,26 @@ half4 main(float2 xy) {
 
   float edge = smoothstep(1.0, 0.92, r);
   float wave = motion * sin(uv.x * 14.0 + time * 2.2) * 0.018
-    + motion * sin(uv.x * 7.0 - time * 1.4) * 0.012;
+    + motion * sin(uv.x * 7.0 - time * 1.4) * 0.012
+    + splash * sin(uv.x * 28.0 + time * 8.0) * 0.045;
   float level = 1.0 - fill + wave;
   float below = smoothstep(level - 0.01, level + 0.01, uv.y);
   float foamBand = smoothstep(level - 0.03, level, uv.y) * (1.0 - smoothstep(level, level + 0.04, uv.y));
+
+  float ripple = splash * (1.0 - smoothstep(0.0, 0.55, abs(r - (0.35 + splash * 0.4))));
+  float burst = celebrate * (1.0 - smoothstep(0.2, 0.95, r)) * (0.55 + 0.45 * sin(time * 14.0));
 
   float3 air = surface;
   float depthMix = clamp((uv.y - level) / max(fill, 0.001), 0.0, 1.0);
   float3 body = mix(water, deep, depthMix * 0.85);
   float caustic = motion * 0.08 * sin((uv.x + uv.y) * 20.0 + time * 1.6);
   body += float3(caustic, caustic * 0.8, caustic * 0.5);
+  body = mix(body, foam, ripple * 0.65);
+  body = mix(body, foam, burst * 0.8);
 
   float3 color = mix(air, body, below);
   color = mix(color, foam, foamBand * below);
+  color = mix(color, foam, burst * (1.0 - below) * 0.35);
   float alpha = edge;
   return half4(color * alpha, alpha);
 }
@@ -100,10 +111,49 @@ export function WaterLiquidVessel({
 
   const time = useSharedValue(0);
   const fill = useSharedValue(presentation.fillRatio);
+  const splash = useSharedValue(0);
+  const celebrate = useSharedValue(0);
+  const prevFillRef = useRef(presentation.fillRatio);
+  const prevPhaseRef = useRef(presentation.phase);
 
   useEffect(() => {
-    fill.value = presentation.fillRatio;
-  }, [fill, presentation.fillRatio]);
+    const nextFill = presentation.fillRatio;
+    const prevFill = prevFillRef.current;
+    const fillChanged = Math.abs(nextFill - prevFill) > 0.0001;
+
+    if (!presentation.motionAllowed) {
+      fill.value = nextFill;
+      splash.value = 0;
+      celebrate.value = 0;
+    } else if (fillChanged) {
+      fill.value = withSpring(nextFill, { damping: 16, stiffness: 140, mass: 0.8 });
+      splash.value = withSequence(
+        withTiming(1, { duration: 90 }),
+        withTiming(0, { duration: WaterMotion.splashMs }),
+      );
+    }
+
+    if (
+      presentation.motionAllowed &&
+      presentation.phase === 'celebrated' &&
+      prevPhaseRef.current !== 'celebrated'
+    ) {
+      celebrate.value = withSequence(
+        withTiming(1, { duration: 160 }),
+        withTiming(0, { duration: WaterMotion.celebrateMs }),
+      );
+    }
+
+    prevFillRef.current = nextFill;
+    prevPhaseRef.current = presentation.phase;
+  }, [
+    celebrate,
+    fill,
+    presentation.fillRatio,
+    presentation.motionAllowed,
+    presentation.phase,
+    splash,
+  ]);
 
   useEffect(() => {
     if (!presentation.motionAllowed) {
@@ -127,6 +177,8 @@ export function WaterLiquidVessel({
     fill: fill.value,
     time: time.value,
     motion: presentation.motionAllowed ? 1 : 0,
+    splash: splash.value,
+    celebrate: celebrate.value,
     water: waterRgb,
     deep: deepRgb,
     foam: foamRgb,

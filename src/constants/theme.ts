@@ -77,6 +77,8 @@ export const WaterMaterial = {
     foam: '#F2FAFF',
     /** Labels on water / danger fills (AA in light + dark). */
     onWater: '#F2FAFF',
+    /** Dark outline behind stroked foam/onWater glyphs. */
+    strokeOutline: '#000000',
     caustic: '#5EB8E8',
     ink: '#0A2A3D',
     mist: '#60646C',
@@ -92,6 +94,8 @@ export const WaterMaterial = {
     foam: '#B8E0F5',
     /** Labels on water / danger fills (AA in light + dark). */
     onWater: '#F2FAFF',
+    /** Dark outline behind stroked foam/onWater glyphs. */
+    strokeOutline: '#000000',
     caustic: '#6EC4F0',
     ink: '#E8F4FC',
     mist: '#95A6B8',

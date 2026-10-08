@@ -115,7 +115,7 @@ export default function SettingsScreen() {
         <StrokedText
           type="smallBold"
           fill={water.onWater}
-          outline="#000000"
+          outline={water.strokeOutline}
           outlineWidth={1.5}
           style={styles.saveBtnLabel}>
           {t('settings.save')}

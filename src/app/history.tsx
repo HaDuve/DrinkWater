@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenBackButton } from '@/components/screen-back-button';
 import { ScreenLoadingState } from '@/components/screen-loading-state';
-import { StrokedText } from '@/components/stroked-text';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WaterHistoryChart } from '@/components/water-history-chart';
@@ -106,19 +105,11 @@ export default function HistoryScreen() {
                     isActive && { backgroundColor: water.waterDeep },
                     pressed && styles.pressed,
                   ]}>
-                  {isActive ? (
-                    <StrokedText
-                      type="smallBold"
-                      fill={water.onWater}
-                      outline="#000000"
-                      outlineWidth={1.2}>
-                      {rangeLabel}
-                    </StrokedText>
-                  ) : (
-                    <ThemedText type="smallBold" style={{ color: water.mist }}>
-                      {rangeLabel}
-                    </ThemedText>
-                  )}
+                  <ThemedText
+                    type="smallBold"
+                    style={{ color: isActive ? water.onWater : water.mist }}>
+                    {rangeLabel}
+                  </ThemedText>
                 </Pressable>
               );
             })}

@@ -5,8 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { HomeSettingsButton } from '@/components/home-settings-button';
-import { HomeWeekTeaser } from '@/components/home-week-teaser';
 import { ScreenLoadingState } from '@/components/screen-loading-state';
 import { StrokedText } from '@/components/stroked-text';
 import { ThemedText } from '@/components/themed-text';
@@ -15,6 +13,8 @@ import { WaterLiquidVessel } from '@/components/water-liquid-vessel';
 import { WaterProgressRing } from '@/components/water-progress-ring';
 import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { HomeSettingsButton } from '@/features/water/components/home-settings-button';
+import { HomeWeekTeaser } from '@/features/water/components/home-week-teaser';
 import { pickHomeVesselKind } from '@/features/water/domain/home-vessel-kind';
 import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { buildWeekTeaserSummary } from '@/features/water/domain/week-teaser';
@@ -65,11 +65,6 @@ export default function HomeScreen() {
     });
   }, [state]);
 
-  const weekTeaser = useMemo(() => {
-    if (!state || !weekHistory) return null;
-    return buildWeekTeaserSummary(weekHistory, state.goalMl);
-  }, [state, weekHistory]);
-
   const runGlassAction = useCallback(
     (action: 'add' | 'undo', amount: number) => {
       if (busyAction) return;
@@ -86,6 +81,8 @@ export default function HomeScreen() {
           AccessibilityInfo.announceForAccessibility(
             action === 'add' ? t('home.addGlassDone') : t('home.undoGlassDone'),
           );
+        } catch {
+          AccessibilityInfo.announceForAccessibility(t('home.glassActionFailed'));
         } finally {
           setBusyAction(null);
         }
@@ -94,10 +91,11 @@ export default function HomeScreen() {
     [busyAction, refresh, t],
   );
 
-  if (!state || !weekHistory || !weekTeaser) {
+  if (!state || !weekHistory) {
     return <ScreenLoadingState />;
   }
 
+  const weekTeaser = buildWeekTeaserSummary(weekHistory, state.goalMl);
   const progress = state.goalMl > 0 ? state.intakeMl / state.goalMl : 0;
   const vesselSublabel =
     progress >= 1
@@ -163,7 +161,7 @@ export default function HomeScreen() {
               <StrokedText
                 type="smallBold"
                 fill={water.onWater}
-                outline="#000000"
+                outline={water.strokeOutline}
                 outlineWidth={1.5}
                 style={styles.primaryBtnLabel}>
                 {primaryLabel}

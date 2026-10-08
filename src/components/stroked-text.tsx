@@ -3,7 +3,7 @@ import { StyleSheet, View, type TextProps } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 
-function buildOutlineOffsets(width: number): Array<[number, number]> {
+function buildOutlineOffsets(width: number): [number, number][] {
   const w = width;
   const d = width * 0.8;
   return [
@@ -21,7 +21,8 @@ function buildOutlineOffsets(width: number): Array<[number, number]> {
 type Props = {
   children: string;
   fill: string;
-  outline?: string;
+  /** Dark outline color (use `water.strokeOutline`). */
+  outline: string;
   /** Outline thickness in dp; vessel labels ~1.5, buttons ~2. */
   outlineWidth?: number;
   type?: 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary' | 'code';
@@ -38,7 +39,7 @@ type Props = {
 export function StrokedText({
   children,
   fill,
-  outline = '#000000',
+  outline,
   outlineWidth = 1.5,
   type = 'smallBold',
   style,

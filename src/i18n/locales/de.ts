@@ -17,6 +17,7 @@ export const de: TranslationResources = {
     undoGlass: "Glas rückgängig",
     undoGlassBusy: "Wird rückgängig…",
     undoGlassDone: "Glas rückgängig gemacht",
+    glassActionFailed: "Glas konnte nicht aktualisiert werden. Bitte erneut versuchen.",
     intakeGoal: "{{intake}} / {{goal}} ml",
     intakeGoalTop: "{{intake}} /",
     intakeGoalBottom: "{{goal}} ml",

@@ -15,6 +15,7 @@ export const en = {
     undoGlass: "Undo glass",
     undoGlassBusy: "Undoing…",
     undoGlassDone: "Glass undone",
+    glassActionFailed: "Couldn’t update glass. Try again.",
     intakeGoal: "{{intake}} / {{goal}} ml",
     intakeGoalTop: "{{intake}} /",
     intakeGoalBottom: "{{goal}} ml",

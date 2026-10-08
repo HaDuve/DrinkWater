@@ -22,9 +22,16 @@ type VesselLineProps = {
   maxFontSizeMultiplier?: number;
 };
 
-function VesselLine({ children, fill, type, style, ...textProps }: VesselLineProps) {
+function VesselLine({
+  children,
+  fill,
+  outline,
+  type,
+  style,
+  ...textProps
+}: VesselLineProps & { outline: string }) {
   return (
-    <StrokedText type={type} fill={fill} outline="#000000" style={style} {...textProps}>
+    <StrokedText type={type} fill={fill} outline={outline} style={style} {...textProps}>
       {children}
     </StrokedText>
   );
@@ -36,12 +43,14 @@ function VesselLine({ children, fill, type, style, ...textProps }: VesselLinePro
  */
 export function WaterVesselLabels({ intakeLine, goalLine, sublabel }: Props) {
   const water = useWaterMaterial();
+  const outline = water.strokeOutline;
 
   return (
     <View style={styles.labelBlock} accessible={false} pointerEvents="none">
       <VesselLine
         type="subtitle"
         fill={water.foam}
+        outline={outline}
         style={[styles.lineText, styles.tabular]}
         numberOfLines={1}
         adjustsFontSizeToFit
@@ -52,6 +61,7 @@ export function WaterVesselLabels({ intakeLine, goalLine, sublabel }: Props) {
       <VesselLine
         type="subtitle"
         fill={water.foam}
+        outline={outline}
         style={[styles.lineText, styles.tabular]}
         numberOfLines={1}
         adjustsFontSizeToFit
@@ -60,7 +70,12 @@ export function WaterVesselLabels({ intakeLine, goalLine, sublabel }: Props) {
         {goalLine}
       </VesselLine>
       {sublabel ? (
-        <VesselLine type="small" fill={water.foam} style={styles.sublabel} maxFontSizeMultiplier={1.5}>
+        <VesselLine
+          type="small"
+          fill={water.foam}
+          outline={outline}
+          style={styles.sublabel}
+          maxFontSizeMultiplier={1.5}>
           {sublabel}
         </VesselLine>
       ) : null}

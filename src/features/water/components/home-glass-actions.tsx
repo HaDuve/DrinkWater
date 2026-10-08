@@ -3,7 +3,6 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { StrokedText } from '@/components/stroked-text';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { HomeBusyAction } from '@/features/water/domain/home-center-layout';
@@ -45,14 +44,9 @@ export function HomeGlassActions({
           busyAction && styles.disabled,
         ]}
         onPress={onAdd}>
-        <StrokedText
-          type="smallBold"
-          fill={water.onWater}
-          outline={water.strokeOutline}
-          outlineWidth={1.5}
-          style={styles.primaryBtnLabel}>
+        <ThemedText type="smallBold" style={[styles.primaryBtnLabel, { color: water.onWater }]}>
           {primaryLabel}
-        </StrokedText>
+        </ThemedText>
       </Pressable>
 
       {canUndo ? (
@@ -101,7 +95,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 48,
     justifyContent: 'center',
-    overflow: 'visible',
   },
   primaryBtnWithUndo: {
     flex: 5,

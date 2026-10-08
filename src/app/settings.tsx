@@ -19,7 +19,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExternalLink } from '@/components/external-link';
 import { ScreenBackButton } from '@/components/screen-back-button';
 import { ScreenLoadingState } from '@/components/screen-loading-state';
-import { StrokedText } from '@/components/stroked-text';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -112,14 +111,9 @@ export default function SettingsScreen() {
           pressed && styles.pressed,
         ]}
         onPress={dismissAndSave}>
-        <StrokedText
-          type="smallBold"
-          fill={water.onWater}
-          outline={water.strokeOutline}
-          outlineWidth={1.5}
-          style={styles.saveBtnLabel}>
+        <ThemedText type="smallBold" style={[styles.saveBtnLabel, { color: water.onWater }]}>
           {t('settings.save')}
-        </StrokedText>
+        </ThemedText>
       </Pressable>
     </View>
   );

@@ -118,10 +118,6 @@ export default function HomeScreen() {
             />
           </View>
 
-          {reminderStatus ? (
-            <WaterReminderInfo status={reminderStatus} todayPreview={todayPreview} />
-          ) : null}
-
           <View style={styles.actions}>
             <Pressable
               role="button"
@@ -152,11 +148,15 @@ export default function HomeScreen() {
                 busyAction && styles.disabled,
               ]}
               onPress={() => runGlassAction('undo', state.glassMl)}>
-              <ThemedText type="linkPrimary">
+              <ThemedText type="linkPrimary" style={{ color: water.water }}>
                 {undoBusy ? t('home.undoGlassBusy') : t('home.undoGlass')}
               </ThemedText>
             </Pressable>
           </View>
+
+          {reminderStatus ? (
+            <WaterReminderInfo status={reminderStatus} todayPreview={todayPreview} />
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>

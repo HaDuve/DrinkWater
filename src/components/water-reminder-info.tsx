@@ -5,13 +5,14 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+
+const LINK_MIN_HEIGHT = 48;
 import { buildHomeReminderBody } from '@/features/water/components/next-glass-reminder-copy';
 import type { TodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
-import { useTheme } from '@/hooks/use-theme';
+import { useWaterMaterial } from '@/hooks/use-water-material';
 import type { WaterReminderUiState } from '@/lib/notifications';
 
-const DOT_SIZE = 6;
-const ACTIVE_DOT = '#22c55e';
+const DOT_SIZE = 5;
 
 type Props = {
   status: WaterReminderUiState;
@@ -20,7 +21,7 @@ type Props = {
 
 export function WaterReminderInfo({ status, todayPreview }: Props) {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const water = useWaterMaterial();
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -73,29 +74,49 @@ export function WaterReminderInfo({ status, todayPreview }: Props) {
         ? t('reminder.linkTurnOn')
         : t('reminder.linkSetup');
 
+  const statusLabel = expectingNext
+    ? t('reminder.a11yScheduled')
+    : t('reminder.a11yNotScheduled');
+
   return (
-    <View style={styles.wrap}>
+    <View
+      style={[
+        styles.wrap,
+        {
+          backgroundColor: water.surfaceDeep,
+        },
+      ]}>
       <View style={styles.row}>
         <View
           style={[
             styles.dot,
             {
-              backgroundColor: expectingNext ? ACTIVE_DOT : theme.textSecondary,
+              backgroundColor: expectingNext ? water.caustic : water.mist,
             },
           ]}
-          accessibilityLabel={
-            expectingNext ? t('reminder.a11yScheduled') : t('reminder.a11yNotScheduled')
-          }
+          accessible={false}
+          importantForAccessibility="no"
         />
         <View style={styles.textBlock}>
           <View style={styles.textRow}>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.bodyText}>
+            <ThemedText
+              type="small"
+              style={[styles.bodyText, { color: water.mist }]}
+              accessibilityLabel={`${statusLabel}. ${body}`}>
               {body}
             </ThemedText>
             {showSettingsLink ? (
               <Link href="/settings" asChild>
-                <Pressable>
-                  <ThemedText type="linkPrimary" style={styles.linkText}>
+                <Pressable
+                  role="link"
+                  accessibilityRole="link"
+                  accessibilityLabel={linkLabel}
+                  hitSlop={Spacing.two}
+                  style={({ pressed }) => [
+                    styles.linkHit,
+                    pressed && styles.linkPressed,
+                  ]}>
+                  <ThemedText type="small" style={[styles.linkText, { color: water.water }]}>
                     {linkLabel}
                   </ThemedText>
                 </Pressable>
@@ -111,8 +132,10 @@ export function WaterReminderInfo({ status, todayPreview }: Props) {
 const styles = StyleSheet.create({
   wrap: {
     alignSelf: 'stretch',
-    marginTop: Spacing.two,
-    paddingHorizontal: Spacing.two,
+    marginTop: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Spacing.two,
   },
   row: {
     flexDirection: 'row',
@@ -124,7 +147,8 @@ const styles = StyleSheet.create({
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    marginTop: 6,
+    marginTop: 7,
+    opacity: 0.85,
   },
   textBlock: {
     flex: 1,
@@ -138,8 +162,21 @@ const styles = StyleSheet.create({
   },
   bodyText: {
     flexShrink: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   linkText: {
     flexShrink: 0,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+  },
+  linkHit: {
+    minHeight: LINK_MIN_HEIGHT,
+    justifyContent: 'center',
+  },
+  linkPressed: {
+    opacity: 0.7,
   },
 });

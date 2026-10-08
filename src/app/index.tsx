@@ -11,6 +11,7 @@ import { WaterLiquidVessel } from '@/components/water-liquid-vessel';
 import { WaterProgressRing } from '@/components/water-progress-ring';
 import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { pickHomeVesselKind } from '@/features/water/domain/home-vessel-kind';
 import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { useTabBarBottomInset } from '@/hooks/use-tab-bar-bottom-inset';
 import { useWaterMaterial } from '@/hooks/use-water-material';
@@ -106,7 +107,7 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           bounces>
           <View style={styles.hero}>
-            {state.animationsEnabled ? (
+            {pickHomeVesselKind(state.animationsEnabled) === 'liquid' ? (
               <WaterLiquidVessel
                 intakeMl={state.intakeMl}
                 goalMl={state.goalMl}

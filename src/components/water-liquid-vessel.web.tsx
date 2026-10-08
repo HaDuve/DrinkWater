@@ -1,14 +1,9 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import {
-  useReducedMotion,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { WaterVesselLabels } from '@/components/water-vessel-labels';
-import { WaterMotion } from '@/constants/theme';
 import { buildHomeRingPresentation } from '@/features/water/domain/home-ring-presentation';
 import { useWaterMaterial } from '@/hooks/use-water-material';
 
@@ -50,16 +45,6 @@ export function WaterLiquidVessel({
   const cx = size / 2;
   const cy = size / 2;
   const circumference = 2 * Math.PI * radius;
-  const fillAnim = useSharedValue(presentation.fillRatio);
-
-  useEffect(() => {
-    if (!presentation.motionAllowed) {
-      fillAnim.value = presentation.fillRatio;
-      return;
-    }
-    fillAnim.value = withSpring(presentation.fillRatio, WaterMotion.fillSpring);
-  }, [fillAnim, presentation.fillRatio, presentation.motionAllowed]);
-
   const strokeDashoffset = circumference * (1 - presentation.fillRatio);
   const a11yLabel = `${intakeLine} ${goalLine}`;
 

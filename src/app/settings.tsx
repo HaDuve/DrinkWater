@@ -222,6 +222,7 @@ export default function SettingsScreen() {
         <View style={styles.row}>
           <ThemedText type="smallBold">{t("settings.animations")}</ThemedText>
           <Switch
+            accessibilityLabel={t("settings.animations")}
             value={animations}
             onValueChange={setAnimations}
             trackColor={{ false: theme.backgroundElement, true: "#208AEF" }}

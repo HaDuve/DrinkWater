@@ -8,6 +8,7 @@ import { ScreenLoadingState } from '@/components/screen-loading-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WaterLiquidVessel } from '@/components/water-liquid-vessel';
+import { WaterProgressRing } from '@/components/water-progress-ring';
 import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
@@ -87,6 +88,10 @@ export default function HomeScreen() {
   }
 
   const progress = state.goalMl > 0 ? state.intakeMl / state.goalMl : 0;
+  const vesselSublabel =
+    progress >= 1
+      ? t('home.goalReached')
+      : t('home.percentToGo', { percent: Math.round((1 - progress) * 100) });
   const addBusy = busyAction === 'add';
   const undoBusy = busyAction === 'undo';
 
@@ -101,21 +106,27 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           bounces>
           <View style={styles.hero}>
-            <WaterLiquidVessel
-              intakeMl={state.intakeMl}
-              goalMl={state.goalMl}
-              busyAction={busyAction}
-              size={260}
-              intakeLine={t('home.intakeGoalTop', { intake: state.intakeMl })}
-              goalLine={t('home.intakeGoalBottom', { goal: state.goalMl })}
-              sublabel={
-                progress >= 1
-                  ? t('home.goalReached')
-                  : t('home.percentToGo', {
-                      percent: Math.round((1 - progress) * 100),
-                    })
-              }
-            />
+            {state.animationsEnabled ? (
+              <WaterLiquidVessel
+                intakeMl={state.intakeMl}
+                goalMl={state.goalMl}
+                busyAction={busyAction}
+                size={260}
+                intakeLine={t('home.intakeGoalTop', { intake: state.intakeMl })}
+                goalLine={t('home.intakeGoalBottom', { goal: state.goalMl })}
+                sublabel={vesselSublabel}
+              />
+            ) : (
+              <WaterProgressRing
+                progress={progress}
+                size={260}
+                centerLabel={t('home.intakeGoal', {
+                  intake: state.intakeMl,
+                  goal: state.goalMl,
+                })}
+                sublabel={vesselSublabel}
+              />
+            )}
           </View>
 
           <View style={styles.actions}>

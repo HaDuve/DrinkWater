@@ -26,6 +26,7 @@ describe('saveWaterSettings', () => {
       goalMl: 5000,
       glassMl: 50,
       remindersEnabled: true,
+      animationsEnabled: true,
       reminderWindow: {
         start: { hour: 8, minute: 0 },
         end: { hour: 8, minute: 30 },
@@ -47,6 +48,7 @@ describe('saveWaterSettings', () => {
       goalMl: 2000,
       glassMl: 250,
       remindersEnabled: true,
+      animationsEnabled: false,
       reminderWindow,
     });
 
@@ -57,6 +59,7 @@ describe('saveWaterSettings', () => {
       goalMl: 2000,
       glassMl: 250,
       remindersEnabled: true,
+      animationsEnabled: false,
       reminderWindow,
     });
     expect(mockSyncWaterReminders).toHaveBeenCalledWith(true, {

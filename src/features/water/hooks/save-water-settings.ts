@@ -4,6 +4,7 @@ import type { GlassScheduleError, ReminderWindow } from '@/features/water/domain
 import { syncWaterReminders } from '@/lib/notifications';
 import {
   loadWaterState,
+  saveAnimationsEnabled,
   saveGlassMl,
   saveGoalMl,
   saveReminderWindow,
@@ -14,6 +15,7 @@ export type SaveWaterSettingsInput = {
   goalMl: number;
   glassMl: number;
   remindersEnabled: boolean;
+  animationsEnabled: boolean;
   reminderWindow: ReminderWindow;
 };
 
@@ -26,7 +28,7 @@ export type SaveWaterSettingsResult =
 export async function saveWaterSettings(
   input: SaveWaterSettingsInput,
 ): Promise<SaveWaterSettingsResult> {
-  const { goalMl, glassMl, remindersEnabled, reminderWindow } = input;
+  const { goalMl, glassMl, remindersEnabled, animationsEnabled, reminderWindow } = input;
 
   if (!Number.isFinite(goalMl) || goalMl < 100) {
     return { ok: false, error: 'goal' };
@@ -44,6 +46,7 @@ export async function saveWaterSettings(
   await saveGoalMl(goalMl);
   await saveGlassMl(glassMl);
   await saveRemindersEnabled(remindersEnabled);
+  await saveAnimationsEnabled(animationsEnabled);
   await syncWaterReminders(remindersEnabled, {
     goalMl,
     glassMl,

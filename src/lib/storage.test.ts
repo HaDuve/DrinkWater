@@ -22,6 +22,19 @@ describe('loadWaterState reminder window', () => {
   });
 });
 
+describe('loadWaterState animations', () => {
+  it('defaults animations to on when nothing is stored', async () => {
+    const state = await loadWaterState();
+    expect(state.animationsEnabled).toBe(true);
+  });
+
+  it('reads animations off when stored as false', async () => {
+    await AsyncStorage.setItem('@water_animations_enabled', 'false');
+    const state = await loadWaterState();
+    expect(state.animationsEnabled).toBe(false);
+  });
+});
+
 describe('saveReminderWindow', () => {
   it('round-trips a custom window through loadWaterState', async () => {
     const window = {

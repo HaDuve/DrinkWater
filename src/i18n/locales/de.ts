@@ -42,6 +42,7 @@ export const de: TranslationResources = {
       "noch {{count}} Gläser – alle {{intervalMinutes}} Minuten\nnächste Erinnerung um {{clockTime}}",
     todayRemainingSilent: "Heute keine Erinnerungen mehr.",
     reminders: "Erinnerungen",
+    animations: "Animationen",
     save: "Einstellungen speichern",
     alertInvalidGoalTitle: "Ungültiges Ziel",
     alertInvalidGoalMessage: "Das Tagesziel muss mindestens 100 ml betragen.",

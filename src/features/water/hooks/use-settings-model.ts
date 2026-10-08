@@ -20,6 +20,7 @@ export function useSettingsModel() {
   const [goalInput, setGoalInput] = useState('');
   const [glassInput, setGlassInput] = useState('');
   const [reminders, setReminders] = useState(true);
+  const [animations, setAnimations] = useState(true);
   const [reminderWindow, setReminderWindow] = useState<ReminderWindow | null>(null);
 
   const refresh = useCallback(() => {
@@ -28,6 +29,7 @@ export function useSettingsModel() {
       setGoalInput(String(state.goalMl));
       setGlassInput(String(state.glassMl));
       setReminders(state.remindersEnabled);
+      setAnimations(state.animationsEnabled);
       setReminderWindow(state.reminderWindow);
     });
   }, []);
@@ -89,6 +91,7 @@ export function useSettingsModel() {
       goalMl: Number.parseInt(goalInput, 10),
       glassMl: Number.parseInt(glassInput, 10),
       remindersEnabled: reminders,
+      animationsEnabled: animations,
       reminderWindow,
     });
 
@@ -97,7 +100,7 @@ export function useSettingsModel() {
     }
 
     return result;
-  }, [goalInput, glassInput, reminders, reminderWindow, refresh]);
+  }, [goalInput, glassInput, reminders, animations, reminderWindow, refresh]);
 
   return {
     loaded,
@@ -112,6 +115,8 @@ export function useSettingsModel() {
     setGlassInput,
     reminders,
     setReminders,
+    animations,
+    setAnimations,
     refresh,
     save,
   };

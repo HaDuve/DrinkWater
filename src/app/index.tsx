@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenLoadingState } from '@/components/screen-loading-state';
@@ -16,11 +16,14 @@ import { getWaterReminderUiState, syncWaterRemindersFromState, type WaterReminde
 import type { WaterSettings } from '@/lib/storage';
 import { addGlassAmount, loadWaterState, removeGlassAmount } from '@/lib/storage';
 
+type BusyAction = 'add' | 'undo' | null;
+
 export default function HomeScreen() {
   const { t } = useTranslation();
   const tabBarBottomInset = useTabBarBottomInset();
   const [state, setState] = useState<WaterSettings | null>(null);
   const [reminderStatus, setReminderStatus] = useState<WaterReminderUiState | null>(null);
+  const [busyAction, setBusyAction] = useState<BusyAction>(null);
 
   const refresh = useCallback(() => {
     void (async () => {
@@ -53,70 +56,105 @@ export default function HomeScreen() {
     });
   }, [state]);
 
+  const runGlassAction = useCallback(
+    (action: 'add' | 'undo', amount: number) => {
+      if (busyAction) return;
+      setBusyAction(action);
+      void (async () => {
+        try {
+          if (action === 'add') {
+            await addGlassAmount(amount);
+          } else {
+            await removeGlassAmount(amount);
+          }
+          await syncWaterRemindersFromState();
+          refresh();
+          AccessibilityInfo.announceForAccessibility(
+            action === 'add' ? t('home.addGlassDone') : t('home.undoGlassDone'),
+          );
+        } finally {
+          setBusyAction(null);
+        }
+      })();
+    },
+    [busyAction, refresh, t],
+  );
+
   if (!state) {
     return <ScreenLoadingState />;
   }
 
   const progress = state.goalMl > 0 ? state.intakeMl / state.goalMl : 0;
+  const addBusy = busyAction === 'add';
+  const undoBusy = busyAction === 'undo';
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView
         style={[styles.safeArea, { paddingBottom: tabBarBottomInset + Spacing.three }]}
         edges={['top', 'left', 'right']}>
-        <ThemedText type="title" style={styles.title}>
-          {t('brand.name')}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
-          {t('home.subtitle')}
-        </ThemedText>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          bounces>
+          <View style={styles.hero}>
+            <WaterProgressRing
+              progress={progress}
+              size={260}
+              centerLabel={t('home.intakeGoal', {
+                intake: state.intakeMl,
+                goal: state.goalMl,
+              })}
+              sublabel={
+                progress >= 1
+                  ? t('home.goalReached')
+                  : t('home.percentToGo', {
+                      percent: Math.round((1 - progress) * 100),
+                    })
+              }
+            />
+          </View>
 
-        <WaterProgressRing
-          progress={progress}
-          centerLabel={t('home.intakeGoal', {
-            intake: state.intakeMl,
-            goal: state.goalMl,
-          })}
-          sublabel={
-            progress >= 1
-              ? t('home.goalReached')
-              : t('home.percentToGo', {
-                  percent: Math.round((1 - progress) * 100),
-                })
-          }
-        />
+          {reminderStatus ? (
+            <WaterReminderInfo status={reminderStatus} todayPreview={todayPreview} />
+          ) : null}
 
-        {reminderStatus ? (
-          <WaterReminderInfo status={reminderStatus} todayPreview={todayPreview} />
-        ) : null}
+          <View style={styles.actions}>
+            <Pressable
+              role="button"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: Boolean(busyAction), busy: addBusy }}
+              disabled={Boolean(busyAction)}
+              style={({ pressed }) => [
+                styles.primaryBtn,
+                pressed && !busyAction && styles.pressed,
+                busyAction && styles.disabled,
+              ]}
+              onPress={() => runGlassAction('add', state.glassMl)}>
+              <ThemedText type="smallBold" style={styles.btnLightText}>
+                {addBusy ? t('home.addGlassBusy') : t('home.addGlass', { ml: state.glassMl })}
+              </ThemedText>
+            </Pressable>
 
-        <View style={styles.actions}>
-          <Pressable
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-            onPress={() => {
-              void (async () => {
-                await addGlassAmount(state.glassMl);
-                await syncWaterRemindersFromState();
-                refresh();
-              })();
-            }}>
-            <ThemedText type="smallBold" style={styles.btnLightText}>
-              {t('home.addGlass', { ml: state.glassMl })}
-            </ThemedText>
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
-            onPress={() => {
-              void (async () => {
-                await removeGlassAmount(state.glassMl);
-                await syncWaterRemindersFromState();
-                refresh();
-              })();
-            }}>
-            <ThemedText type="smallBold">{t('home.undoGlass')}</ThemedText>
-          </Pressable>
-        </View>
+            <Pressable
+              role="button"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: Boolean(busyAction), busy: undoBusy }}
+              disabled={Boolean(busyAction)}
+              hitSlop={Spacing.two}
+              style={({ pressed }) => [
+                styles.tertiaryHit,
+                pressed && !busyAction && styles.pressed,
+                busyAction && styles.disabled,
+              ]}
+              onPress={() => runGlassAction('undo', state.glassMl)}>
+              <ThemedText type="linkPrimary">
+                {undoBusy ? t('home.undoGlassBusy') : t('home.undoGlass')}
+              </ThemedText>
+            </Pressable>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -130,42 +168,54 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
     maxWidth: MaxContentWidth,
+    alignSelf: 'stretch',
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.four,
     gap: Spacing.three,
   },
-  title: {
-    fontSize: 28,
-    lineHeight: 34,
-    marginTop: Spacing.two,
-  },
-  subtitle: {
-    marginBottom: Spacing.two,
+  hero: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: Spacing.four,
   },
   actions: {
     gap: Spacing.two,
     alignSelf: 'stretch',
-    marginTop: Spacing.four,
+    alignItems: 'center',
+    marginTop: Spacing.two,
   },
   primaryBtn: {
+    alignSelf: 'stretch',
     backgroundColor: '#208AEF',
     paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
     borderRadius: Spacing.three,
     alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
   },
-  secondaryBtn: {
-    backgroundColor: 'transparent',
-    paddingVertical: Spacing.three,
-    borderRadius: Spacing.three,
+  tertiaryHit: {
+    minHeight: 48,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#208AEF',
+    justifyContent: 'center',
   },
   btnLightText: {
     color: '#ffffff',
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.7,
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });

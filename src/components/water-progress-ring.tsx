@@ -10,7 +10,8 @@ type Props = {
   progress: number;
   size?: number;
   strokeWidth?: number;
-  centerLabel: string;
+  intakeLine: string;
+  goalLine: string;
   sublabel?: string;
 };
 
@@ -18,7 +19,8 @@ export function WaterProgressRing({
   progress,
   size = 220,
   strokeWidth = 14,
-  centerLabel,
+  intakeLine,
+  goalLine,
   sublabel,
 }: Props) {
   const theme = useTheme();
@@ -54,7 +56,10 @@ export function WaterProgressRing({
         />
       </Svg>
       <ThemedText type="subtitle" style={{ textAlign: 'center' }}>
-        {centerLabel}
+        {intakeLine}
+      </ThemedText>
+      <ThemedText type="subtitle" style={{ textAlign: 'center' }}>
+        {goalLine}
       </ThemedText>
       {sublabel ? (
         <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 4 }}>

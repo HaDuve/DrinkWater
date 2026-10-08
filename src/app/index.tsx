@@ -134,10 +134,8 @@ export default function HomeScreen() {
               <WaterProgressRing
                 progress={progress}
                 size={260}
-                centerLabel={t('home.intakeGoal', {
-                  intake: state.intakeMl,
-                  goal: state.goalMl,
-                })}
+                intakeLine={t('home.intakeGoalTop', { intake: state.intakeMl })}
+                goalLine={t('home.intakeGoalBottom', { goal: state.goalMl })}
                 sublabel={vesselSublabel}
               />
             )}

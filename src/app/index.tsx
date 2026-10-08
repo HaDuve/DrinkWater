@@ -67,20 +67,20 @@ export default function HomeScreen() {
   }, [state]);
 
   const runGlassAction = useCallback(
-    (action: 'add' | 'undo', amount: number) => {
+    (action: { type: 'add' } | { type: 'undo'; amount: number }) => {
       if (busyAction) return;
-      setBusyAction(action);
+      setBusyAction(action.type);
       void (async () => {
         try {
-          if (action === 'add') {
+          if (action.type === 'add') {
             await logGlassAndSyncReminders();
           } else {
-            await removeGlassAmount(amount);
+            await removeGlassAmount(action.amount);
             await syncWaterRemindersFromState();
           }
           refresh();
           AccessibilityInfo.announceForAccessibility(
-            action === 'add' ? t('home.addGlassDone') : t('home.undoGlassDone'),
+            action.type === 'add' ? t('home.addGlassDone') : t('home.undoGlassDone'),
           );
         } catch {
           AccessibilityInfo.announceForAccessibility(t('home.glassActionFailed'));
@@ -156,7 +156,7 @@ export default function HomeScreen() {
                 pressed && !busyAction && styles.pressed,
                 busyAction && styles.disabled,
               ]}
-              onPress={() => runGlassAction('add', state.glassMl)}>
+              onPress={() => runGlassAction({ type: 'add' })}>
               <StrokedText
                 type="smallBold"
                 fill={water.onWater}
@@ -180,7 +180,7 @@ export default function HomeScreen() {
                   pressed && !busyAction && styles.pressed,
                   busyAction && styles.disabled,
                 ]}
-                onPress={() => runGlassAction('undo', state.glassMl)}>
+                onPress={() => runGlassAction({ type: 'undo', amount: state.glassMl })}>
                 <SymbolView
                   name="arrow.uturn.backward"
                   size={20}

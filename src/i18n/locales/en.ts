@@ -13,7 +13,11 @@ export const en = {
     goalReached: "Goal reached!",
     percentToGo: "{{percent}}% to go",
     addGlass: "+ Glass ({{ml}} ml)",
+    addGlassBusy: "Adding…",
+    addGlassDone: "Glass added",
     undoGlass: "Undo glass",
+    undoGlassBusy: "Undoing…",
+    undoGlassDone: "Glass undone",
     intakeGoal: "{{intake}} / {{goal}} ml",
   },
   settings: {

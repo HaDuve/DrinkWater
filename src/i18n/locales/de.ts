@@ -15,7 +15,11 @@ export const de: TranslationResources = {
     goalReached: "Ziel erreicht!",
     percentToGo: "Noch {{percent}} %",
     addGlass: "+ Glas ({{ml}} ml)",
+    addGlassBusy: "Wird hinzugefügt…",
+    addGlassDone: "Glas hinzugefügt",
     undoGlass: "Glas rückgängig",
+    undoGlassBusy: "Wird rückgängig…",
+    undoGlassDone: "Glas rückgängig gemacht",
     intakeGoal: "{{intake}} / {{goal}} ml",
   },
   settings: {

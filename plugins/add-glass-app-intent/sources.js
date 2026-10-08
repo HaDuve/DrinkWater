@@ -1,7 +1,28 @@
 /** Deep link the Siri App Intent opens so JS logs one Glass. */
 const ADD_GLASS_DEEP_LINK = 'drinkwater://add-glass';
 
-const APP_SHORTCUT_PHRASE_KEY = 'Add a glass in ${applicationName}';
+/**
+ * Development-language (en) App Shortcut phrases + de localizations.
+ * Every phrase must include ${applicationName} for Siri discovery.
+ */
+const APP_SHORTCUT_PHRASES = [
+  {
+    en: 'Add a glass in ${applicationName}',
+    de: 'Glas in ${applicationName} hinzufügen',
+  },
+  {
+    en: 'Log a glass in ${applicationName}',
+    de: 'Ein Glas in ${applicationName} eintragen',
+  },
+  {
+    en: 'Add glass in ${applicationName}',
+    de: 'Glas hinzufügen in ${applicationName}',
+  },
+  {
+    en: 'Add a glass to the ${applicationName} app',
+    de: 'Füge der ${applicationName} App ein Glas hinzu',
+  },
+];
 
 function buildAddGlassIntentSwift() {
   // OpenURLIntent requires universal links; custom schemes must use openURL.
@@ -26,7 +47,15 @@ struct AddGlassIntent: AppIntent {
 `;
 }
 
+function phraseToSwiftLiteral(enPhrase) {
+  return enPhrase.replaceAll('${applicationName}', '\\(.applicationName)');
+}
+
 function buildDrinkWaterAppShortcutsSwift() {
+  const phraseLines = APP_SHORTCUT_PHRASES.map(
+    ({ en }) => `        "${phraseToSwiftLiteral(en)}"`
+  ).join(',\n');
+
   return `import AppIntents
 
 @available(iOS 16.0, *)
@@ -35,7 +64,7 @@ struct DrinkWaterAppShortcuts: AppShortcutsProvider {
     AppShortcut(
       intent: AddGlassIntent(),
       phrases: [
-        "Add a glass in \\(.applicationName)"
+${phraseLines}
       ],
       shortTitle: "Add Glass",
       systemImageName: "drop.fill"
@@ -56,15 +85,14 @@ function localizedStringEntry(en, de) {
 
 /** Single string catalog — avoids PBX basename collisions from en/de AppShortcuts.strings. */
 function buildAppShortcutsXcstrings() {
+  const strings = Object.fromEntries(
+    APP_SHORTCUT_PHRASES.map(({ en, de }) => [en, localizedStringEntry(en, de)])
+  );
+
   return `${JSON.stringify(
     {
       sourceLanguage: 'en',
-      strings: {
-        [APP_SHORTCUT_PHRASE_KEY]: localizedStringEntry(
-          APP_SHORTCUT_PHRASE_KEY,
-          'Glas in ${applicationName} hinzufügen'
-        ),
-      },
+      strings,
       version: '1.0',
     },
     null,
@@ -90,6 +118,7 @@ function buildLocalizableXcstrings() {
 
 module.exports = {
   ADD_GLASS_DEEP_LINK,
+  APP_SHORTCUT_PHRASES,
   buildAddGlassIntentSwift,
   buildDrinkWaterAppShortcutsSwift,
   buildAppShortcutsXcstrings,

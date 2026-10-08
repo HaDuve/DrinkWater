@@ -1,5 +1,6 @@
 import {
   ADD_GLASS_DEEP_LINK,
+  APP_SHORTCUT_PHRASES,
   buildAddGlassIntentSwift,
   buildAppShortcutsXcstrings,
   buildDrinkWaterAppShortcutsSwift,
@@ -19,23 +20,25 @@ describe('Add Glass App Intent sources', () => {
     expect(swift).not.toContain('OpenURLIntent');
   });
 
-  it('registers an App Shortcut phrase for English Siri discovery', () => {
+  it('registers English App Shortcut phrases for Siri discovery', () => {
     const swift = buildDrinkWaterAppShortcutsSwift();
 
     expect(swift).toContain('AppShortcutsProvider');
     expect(swift).toContain('AddGlassIntent()');
-    expect(swift).toContain('"Add a glass in \\(.applicationName)"');
+    for (const { en } of APP_SHORTCUT_PHRASES) {
+      const swiftPhrase = en.replaceAll('${applicationName}', '\\(.applicationName)');
+      expect(swift).toContain(`"${swiftPhrase}"`);
+    }
   });
 
-  it('localizes the App Shortcut phrase for German in AppShortcuts.xcstrings', () => {
+  it('localizes App Shortcut phrases for German in AppShortcuts.xcstrings', () => {
     const catalog = JSON.parse(buildAppShortcutsXcstrings());
-    const entry = catalog.strings['Add a glass in ${applicationName}'];
 
     expect(catalog.sourceLanguage).toBe('en');
-    expect(entry.localizations.en.stringUnit.value).toBe('Add a glass in ${applicationName}');
-    expect(entry.localizations.de.stringUnit.value).toBe(
-      'Glas in ${applicationName} hinzufügen'
-    );
+    for (const { en, de } of APP_SHORTCUT_PHRASES) {
+      expect(catalog.strings[en].localizations.en.stringUnit.value).toBe(en);
+      expect(catalog.strings[en].localizations.de.stringUnit.value).toBe(de);
+    }
   });
 
   it('localizes Add Glass title for German in Localizable.xcstrings', () => {

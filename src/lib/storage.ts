@@ -18,6 +18,7 @@ const KEYS = {
   reminderWindowEnd: '@water_reminder_window_end',
   lastResetDate: '@water_last_reset_date',
   remindersEnabled: '@water_reminders_enabled',
+  animationsEnabled: '@water_animations_enabled',
 } as const;
 
 const LEGACY_KEYS = {
@@ -34,6 +35,7 @@ const DEFAULTS = {
   glassMl: 250,
   intakeMl: 0,
   remindersEnabled: true,
+  animationsEnabled: true,
 };
 
 function todayISO(): string {
@@ -57,6 +59,7 @@ export type WaterSettings = {
   reminderWindow: ReminderWindow;
   lastResetDate: string;
   remindersEnabled: boolean;
+  animationsEnabled: boolean;
 };
 
 export type SaveReminderWindowContext = {
@@ -189,11 +192,13 @@ function normalizeSettings(raw: {
   goalMl: string | null;
   glassMl: string | null;
   remindersEnabled: string | null;
-}): Pick<WaterSettings, 'goalMl' | 'glassMl' | 'remindersEnabled'> {
+  animationsEnabled: string | null;
+}): Pick<WaterSettings, 'goalMl' | 'glassMl' | 'remindersEnabled' | 'animationsEnabled'> {
   return {
     goalMl: Math.max(100, parseIntOrFallback(raw.goalMl, DEFAULTS.goalMl)),
     glassMl: Math.max(50, parseIntOrFallback(raw.glassMl, DEFAULTS.glassMl)),
     remindersEnabled: raw.remindersEnabled !== 'false',
+    animationsEnabled: raw.animationsEnabled !== 'false',
   };
 }
 
@@ -217,6 +222,7 @@ async function readRawWaterState(): Promise<{
   legacyIntervalHours: string | null;
   lastResetDate: string | null;
   remindersEnabled: string | null;
+  animationsEnabled: string | null;
 }> {
   const entries = await AsyncStorage.multiGet([
     KEYS.goalMl,
@@ -228,6 +234,7 @@ async function readRawWaterState(): Promise<{
     LEGACY_KEYS.intervalHours,
     KEYS.lastResetDate,
     KEYS.remindersEnabled,
+    KEYS.animationsEnabled,
   ]);
   return {
     goalMl: entries[0]?.[1] ?? null,
@@ -239,6 +246,7 @@ async function readRawWaterState(): Promise<{
     legacyIntervalHours: entries[6]?.[1] ?? null,
     lastResetDate: entries[7]?.[1] ?? null,
     remindersEnabled: entries[8]?.[1] ?? null,
+    animationsEnabled: entries[9]?.[1] ?? null,
   };
 }
 
@@ -284,6 +292,7 @@ export async function loadWaterState(): Promise<WaterSettings> {
     reminderWindow,
     lastResetDate: today,
     remindersEnabled: settings.remindersEnabled,
+    animationsEnabled: settings.animationsEnabled,
   };
 }
 
@@ -314,6 +323,10 @@ export async function saveReminderWindow(
 
 export async function saveRemindersEnabled(enabled: boolean): Promise<void> {
   await AsyncStorage.setItem(KEYS.remindersEnabled, enabled ? 'true' : 'false');
+}
+
+export async function saveAnimationsEnabled(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(KEYS.animationsEnabled, enabled ? 'true' : 'false');
 }
 
 export async function setIntakeMl(ml: number): Promise<void> {

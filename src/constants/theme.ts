@@ -93,10 +93,27 @@ export const WaterMaterial = {
 
 export type WaterMaterialColor = keyof typeof WaterMaterial.light;
 
-/** Motion params for idle shimmer / fill / splash (ms). Honor reduced motion at call sites. */
+/**
+ * Water-material motion. Springs use ζ = c / (2√(k·m)):
+ * vessel slosh underdamped (~0.4); capillary splash closer to ~0.5.
+ * Honor reduced motion at call sites.
+ */
 export const WaterMotion = {
-  idleShimmerPeriodMs: 4200,
-  fillSpringMs: 420,
-  splashMs: 280,
-  celebrateMs: 640,
+  /** Full idle phase cycle (time 0 → 2π). Integer shader ω coeffs keep the seam invisible. */
+  idleShimmerPeriodMs: 7200,
+  /**
+   * Fill level ≈ gravity-wave mass in a glass.
+   * ω₀ = √(k/m) ≈ 8.2 → T ≈ 0.76s; ζ ≈ 0.43 (overshoots then settles).
+   */
+  fillSpring: {
+    mass: 1.4,
+    stiffness: 95,
+    damping: 10,
+  },
+  /**
+   * Impact ripple lifetime (age 0→1). Shader applies exp temporal damping so
+   * amplitude is ~flat before the clock ends (viscous dissipation).
+   */
+  rippleMs: 1900,
+  celebrateMs: 720,
 } as const;

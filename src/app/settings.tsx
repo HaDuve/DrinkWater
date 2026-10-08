@@ -55,6 +55,8 @@ export default function SettingsScreen() {
     setGlassInput,
     reminders,
     setReminders,
+    animations,
+    setAnimations,
     refresh,
     save,
   } = useSettingsModel();
@@ -213,6 +215,16 @@ export default function SettingsScreen() {
           <Switch
             value={reminders}
             onValueChange={setReminders}
+            trackColor={{ false: theme.backgroundElement, true: "#208AEF" }}
+          />
+        </View>
+
+        <View style={styles.row}>
+          <ThemedText type="smallBold">{t("settings.animations")}</ThemedText>
+          <Switch
+            accessibilityLabel={t("settings.animations")}
+            value={animations}
+            onValueChange={setAnimations}
             trackColor={{ false: theme.backgroundElement, true: "#208AEF" }}
           />
         </View>

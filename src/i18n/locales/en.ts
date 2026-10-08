@@ -39,6 +39,7 @@ export const en = {
       "{{count}} glasses left – every {{intervalMinutes}} minutes\nnext reminder at {{clockTime}}",
     todayRemainingSilent: "No more reminders today.",
     reminders: "Reminders",
+    animations: "Animations",
     save: "Save settings",
     alertInvalidGoalTitle: "Invalid goal",
     alertInvalidGoalMessage: "Daily goal must be at least 100 ml.",

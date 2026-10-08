@@ -18,10 +18,11 @@ import { HomeWeekTeaser } from '@/features/water/components/home-week-teaser';
 import { pickHomeVesselKind } from '@/features/water/domain/home-vessel-kind';
 import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { buildWeekTeaserSummary } from '@/features/water/domain/week-teaser';
+import { logGlassAndSyncReminders } from '@/features/water/hooks/log-glass-and-sync-reminders';
 import { useWaterMaterial } from '@/hooks/use-water-material';
 import { getWaterReminderUiState, syncWaterRemindersFromState, type WaterReminderUiState } from '@/lib/notifications';
 import type { DailyHistoryEntry, WaterSettings } from '@/lib/storage';
-import { addGlassAmount, loadDailyHistory, loadWaterState, removeGlassAmount } from '@/lib/storage';
+import { loadDailyHistory, loadWaterState, removeGlassAmount } from '@/lib/storage';
 
 type BusyAction = 'add' | 'undo' | null;
 
@@ -72,11 +73,11 @@ export default function HomeScreen() {
       void (async () => {
         try {
           if (action === 'add') {
-            await addGlassAmount(amount);
+            await logGlassAndSyncReminders();
           } else {
             await removeGlassAmount(amount);
+            await syncWaterRemindersFromState();
           }
-          await syncWaterRemindersFromState();
           refresh();
           AccessibilityInfo.announceForAccessibility(
             action === 'add' ? t('home.addGlassDone') : t('home.undoGlassDone'),

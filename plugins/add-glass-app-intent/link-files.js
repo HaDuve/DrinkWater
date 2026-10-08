@@ -56,15 +56,20 @@ function linkAppShortcutsStringsVariantGroup(project, projectName) {
     project.addToPbxResourcesBuildPhase(buildFile);
   }
 
-  const existingLocales = collectVariantGroupLocales(project, variantGroupKey);
+  const localeFileRefs = collectVariantGroupLocaleRefs(project, variantGroupKey);
 
   for (const locale of APP_SHORTCUT_LOCALES) {
-    if (existingLocales.has(locale)) {
+    const expectedPath = `${projectName}/${locale}.lproj/${APP_SHORTCUTS_STRINGS}`;
+    const existingRef = localeFileRefs.get(locale);
+    if (existingRef) {
+      // Repair older plugin paths that omitted the app folder prefix.
+      existingRef.name = locale;
+      existingRef.path = expectedPath;
+      existingRef.sourceTree = '"<group>"';
       continue;
     }
 
-    const diskPath = `${projectName}/${locale}.lproj/${APP_SHORTCUTS_STRINGS}`;
-    const added = project.addFile(diskPath, variantGroupKey, {
+    const added = project.addFile(expectedPath, variantGroupKey, {
       lastKnownFileType: 'text.plist.strings',
       defaultEncoding: 4,
     });
@@ -74,9 +79,10 @@ function linkAppShortcutsStringsVariantGroup(project, projectName) {
 
     const fileRef = project.pbxFileReferenceSection()[added.fileRef];
     if (fileRef) {
-      // Xcode localized variant convention: name = locale, path relative to app group.
+      // Expo app-group children use project-root paths (DrinkWater/...), not group-relative.
+      // name = locale is the Xcode localized-variant convention.
       fileRef.name = locale;
-      fileRef.path = `${locale}.lproj/${APP_SHORTCUTS_STRINGS}`;
+      fileRef.path = expectedPath;
       fileRef.sourceTree = '"<group>"';
     }
   }
@@ -84,8 +90,8 @@ function linkAppShortcutsStringsVariantGroup(project, projectName) {
   return project;
 }
 
-function collectVariantGroupLocales(project, variantGroupKey) {
-  const locales = new Set();
+function collectVariantGroupLocaleRefs(project, variantGroupKey) {
+  const locales = new Map();
   const variantGroup = project.getPBXVariantGroupByKey(variantGroupKey);
   if (!variantGroup?.children) {
     return locales;
@@ -99,10 +105,12 @@ function collectVariantGroupLocales(project, variantGroupKey) {
     }
     const name = unquote(ref.name);
     const refPath = unquote(ref.path);
-    if (name) {
-      locales.add(name);
-    } else if (refPath?.includes('.lproj/')) {
-      locales.add(refPath.split('.lproj/')[0].split('/').pop());
+    let locale = name;
+    if (!locale && refPath?.includes('.lproj/')) {
+      locale = refPath.split('.lproj/')[0].split('/').pop();
+    }
+    if (locale) {
+      locales.set(locale, ref);
     }
   }
 

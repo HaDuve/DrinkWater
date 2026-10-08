@@ -42,8 +42,8 @@ describe('linkAddGlassAppIntentFiles', () => {
     expect(pbx).toContain('isa = "PBXVariantGroup"');
     expect(pbx).toContain('name = en;');
     expect(pbx).toContain('name = de;');
-    expect(pbx).toContain('en.lproj/AppShortcuts.strings');
-    expect(pbx).toContain('de.lproj/AppShortcuts.strings');
+    expect(pbx).toContain(`path = ${projectName}/en.lproj/AppShortcuts.strings`);
+    expect(pbx).toContain(`path = ${projectName}/de.lproj/AppShortcuts.strings`);
     expect(pbx).toContain('AppShortcuts.strings in Resources');
     expect(pbx).not.toContain('AppShortcuts.xcstrings');
   });

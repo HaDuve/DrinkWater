@@ -5,6 +5,10 @@ type UrlSubscription = { remove: () => void };
 export type AddGlassDeepLinkDeps = {
   getInitialURL: () => Promise<string | null>;
   addEventListener: (type: 'url', listener: (event: { url: string }) => void) => UrlSubscription;
+  /** App Intent cold-start handoff when Linking has no launch URL. */
+  consumePendingAddGlassDeepLink?: () => Promise<string | null>;
+  /** Drop handoff after Linking already delivered the URL (warm openURL). */
+  clearPendingAddGlassDeepLink?: () => Promise<void>;
   logGlassAndSyncReminders: () => Promise<void>;
   onGlassLogged?: () => void;
 };
@@ -43,14 +47,24 @@ export function subscribeAddGlassDeepLink(deps: AddGlassDeepLinkDeps): () => voi
 
   if (!initialFetchStarted) {
     initialFetchStarted = true;
-    void deps.getInitialURL().then((url) => {
-      void processor.onInitialUrl(url);
-    });
+    void (async () => {
+      const initialUrl = await deps.getInitialURL();
+      if (initialUrl) {
+        await deps.clearPendingAddGlassDeepLink?.();
+        await processor.onInitialUrl(initialUrl);
+        return;
+      }
+      // Intent cold start: openAppWhenRun launches without a Linking URL; openURL is often lost
+      // before JS subscribes. The Intent writes a document-directory handoff instead.
+      const pendingUrl = (await deps.consumePendingAddGlassDeepLink?.()) ?? null;
+      await processor.onInitialUrl(pendingUrl);
+    })();
   }
 
   linkingSubscriberCount += 1;
   if (!linkingSubscription) {
     linkingSubscription = deps.addEventListener('url', ({ url }) => {
+      void deps.clearPendingAddGlassDeepLink?.();
       void processor.onEventUrl(url);
     });
   }

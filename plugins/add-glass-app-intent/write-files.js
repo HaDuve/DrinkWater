@@ -5,9 +5,10 @@ const {
   buildAddGlassIntentSwift,
   buildAppShortcutsXcstrings,
   buildDrinkWaterAppShortcutsSwift,
+  buildLocalizableXcstrings,
 } = require('./sources');
 
-/** Writes tracked App Intent Swift + AppShortcuts.xcstrings into the generated iOS app folder. */
+/** Writes tracked App Intent Swift + string catalogs into the generated iOS app folder. */
 function writeAddGlassAppIntentFiles({ nativeProjectRoot, projectName }) {
   const appDir = path.join(nativeProjectRoot, projectName);
 
@@ -18,6 +19,7 @@ function writeAddGlassAppIntentFiles({ nativeProjectRoot, projectName }) {
     'utf8'
   );
   fs.writeFileSync(path.join(appDir, 'AppShortcuts.xcstrings'), buildAppShortcutsXcstrings(), 'utf8');
+  fs.writeFileSync(path.join(appDir, 'Localizable.xcstrings'), buildLocalizableXcstrings(), 'utf8');
 }
 
 module.exports = { writeAddGlassAppIntentFiles };

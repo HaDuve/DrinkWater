@@ -6,19 +6,16 @@ import { getPbxproj } from '@expo/config-plugins/build/ios/utils/Xcodeproj';
 
 import { linkAddGlassAppIntentFiles } from './link-files';
 
-const repoIos = path.join(__dirname, '..', '..', 'ios');
+const fixtureRoot = path.join(__dirname, '__fixtures__', 'ios-project');
 
-const describeIfIos = fs.existsSync(repoIos) ? describe : describe.skip;
-
-describeIfIos('linkAddGlassAppIntentFiles', () => {
+describe('linkAddGlassAppIntentFiles', () => {
   it('adds Swift sources and AppShortcuts.xcstrings to the Xcode project', () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-link-glass-'));
-    copyDirSync(repoIos, path.join(tempRoot, 'ios'));
+    copyDirSync(fixtureRoot, tempRoot);
 
-    const projectRoot = tempRoot;
     const nativeProjectRoot = path.join(tempRoot, 'ios');
     const projectName = 'DrinkWater';
-    const project = getPbxproj(projectRoot);
+    const project = getPbxproj(tempRoot);
 
     linkAddGlassAppIntentFiles({
       project,
@@ -29,16 +26,16 @@ describeIfIos('linkAddGlassAppIntentFiles', () => {
     expect(project.hasFile(`${projectName}/AddGlassIntent.swift`)).toBeTruthy();
     expect(project.hasFile(`${projectName}/DrinkWaterAppShortcuts.swift`)).toBeTruthy();
     expect(project.hasFile(`${projectName}/AppShortcuts.xcstrings`)).toBeTruthy();
+    expect(project.hasFile(`${projectName}/Localizable.xcstrings`)).toBeTruthy();
     expect(
       fs.readFileSync(path.join(nativeProjectRoot, projectName, 'AddGlassIntent.swift'), 'utf8')
-    ).toContain('openAppWhenRun');
+    ).toContain('EnvironmentValues().openURL');
   });
 });
 
 function copyDirSync(from: string, to: string) {
   fs.mkdirSync(to, { recursive: true });
   for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
-    if (entry.name === 'Pods' || entry.name === 'build') continue;
     const src = path.join(from, entry.name);
     const dest = path.join(to, entry.name);
     if (entry.isDirectory()) {

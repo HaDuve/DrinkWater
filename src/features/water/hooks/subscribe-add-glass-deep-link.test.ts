@@ -20,11 +20,9 @@ describe('subscribeAddGlassDeepLink', () => {
       onGlassLogged,
     });
 
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
     urlListener?.({ url: 'drinkwater://add-glass' });
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     expect(logGlassAndSyncReminders).toHaveBeenCalledTimes(1);
     expect(onGlassLogged).toHaveBeenCalledTimes(1);
@@ -41,8 +39,7 @@ describe('subscribeAddGlassDeepLink', () => {
       addEventListener: () => ({ remove }),
       logGlassAndSyncReminders,
     });
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
     first();
 
     const second = subscribeAddGlassDeepLink({
@@ -50,11 +47,38 @@ describe('subscribeAddGlassDeepLink', () => {
       addEventListener: () => ({ remove }),
       logGlassAndSyncReminders,
     });
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
     second();
 
     expect(getInitialURL).toHaveBeenCalledTimes(1);
     expect(logGlassAndSyncReminders).toHaveBeenCalledTimes(1);
   });
+
+  it('logs again on a warm url event after cold-start dedupe', async () => {
+    const logGlassAndSyncReminders = jest.fn().mockResolvedValue(undefined);
+    let urlListener: ((event: { url: string }) => void) | null = null;
+
+    subscribeAddGlassDeepLink({
+      getInitialURL: async () => 'drinkwater://add-glass',
+      addEventListener: (_type, listener) => {
+        urlListener = listener;
+        return { remove: jest.fn() };
+      },
+      logGlassAndSyncReminders,
+    });
+
+    await flushMicrotasks();
+    urlListener?.({ url: 'drinkwater://add-glass' });
+    await flushMicrotasks();
+    urlListener?.({ url: 'drinkwater://add-glass' });
+    await flushMicrotasks();
+
+    expect(logGlassAndSyncReminders).toHaveBeenCalledTimes(2);
+  });
 });
+
+async function flushMicrotasks() {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+}

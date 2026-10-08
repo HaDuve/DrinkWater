@@ -1,4 +1,4 @@
-import { createAddGlassDeepLinkProcessor } from '@/features/water/domain/add-glass-deep-link';
+import { createAddGlassDeepLinkProcessor } from '@/features/water/hooks/add-glass-deep-link-processor';
 
 type UrlSubscription = { remove: () => void };
 

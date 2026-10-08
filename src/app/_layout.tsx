@@ -7,6 +7,7 @@ import { Platform, useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { ScreenshotBootstrap } from '@/components/screenshot-bootstrap';
+import { AddGlassDeepLinkBootstrap } from '@/features/water/components/add-glass-deep-link-bootstrap';
 import { LocaleSync } from '@/i18n/locale-sync';
 import { syncWaterRemindersFromState } from '@/lib/notifications';
 
@@ -22,6 +23,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <LocaleSync>
         <ScreenshotBootstrap />
+        <AddGlassDeepLinkBootstrap />
         <AnimatedSplashOverlay />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />

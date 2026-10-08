@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { SymbolView } from 'expo-symbols';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +18,7 @@ import { HomeWeekTeaser } from '@/features/water/components/home-week-teaser';
 import { pickHomeVesselKind } from '@/features/water/domain/home-vessel-kind';
 import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { buildWeekTeaserSummary } from '@/features/water/domain/week-teaser';
+import { subscribeIntakeChanged } from '@/features/water/hooks/intake-changed';
 import { logGlassAndSyncReminders } from '@/features/water/hooks/log-glass-and-sync-reminders';
 import { useWaterMaterial } from '@/hooks/use-water-material';
 import { getWaterReminderUiState, syncWaterRemindersFromState, type WaterReminderUiState } from '@/lib/notifications';
@@ -54,6 +55,8 @@ export default function HomeScreen() {
       refresh();
     }, [refresh]),
   );
+
+  useEffect(() => subscribeIntakeChanged(refresh), [refresh]);
 
   const todayPreview = useMemo(() => {
     if (!state) return null;

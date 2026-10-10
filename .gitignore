@@ -42,6 +42,11 @@ app-example
 /ios
 /android
 
+# Python
+scripts/__pycache__/
+**/__pycache__/
+*.py[cod]
+
 # App Store screenshot automation output
 /store-screenshots
 

@@ -25,6 +25,7 @@ export const en = {
     weekTeaserSummary: "{{hitDays}}/{{totalDays}} goals · avg {{averageMl}} ml",
     weekTeaserAction: "View history",
     weekTeaserHint: "Opens history",
+    reminderBarHint: "Opens settings",
   },
   settings: {
     title: "Settings",

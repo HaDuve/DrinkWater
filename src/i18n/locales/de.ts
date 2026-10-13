@@ -27,6 +27,7 @@ export const de: TranslationResources = {
     weekTeaserSummary: "{{hitDays}}/{{totalDays}} Ziele · ø {{averageMl}} ml",
     weekTeaserAction: "Verlauf ansehen",
     weekTeaserHint: "Öffnet den Verlauf",
+    reminderBarHint: "Öffnet die Einstellungen",
   },
   settings: {
     title: "Einstellungen",

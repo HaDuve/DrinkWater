@@ -1,12 +1,11 @@
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-
-const LINK_MIN_HEIGHT = 48;
 import { buildHomeReminderBody } from '@/features/water/components/next-glass-reminder-copy';
 import type { TodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { useWaterMaterial } from '@/hooks/use-water-material';
@@ -21,6 +20,7 @@ type Props = {
 
 export function WaterReminderInfo({ status, todayPreview }: Props) {
   const { t } = useTranslation();
+  const router = useRouter();
   const water = useWaterMaterial();
   const [, setTick] = useState(0);
 
@@ -44,139 +44,98 @@ export function WaterReminderInfo({ status, todayPreview }: Props) {
   const expectingNext = status.kind === 'active';
 
   let body: string;
-  let showSettingsLink = false;
+  let actionLabel = t('home.openSettings');
   switch (status.kind) {
     case 'web':
       body = t('reminder.web');
-      showSettingsLink = true;
+      actionLabel = t('reminder.linkSettings');
       break;
     case 'app_off':
       body = t('reminder.appOff');
-      showSettingsLink = true;
+      actionLabel = t('reminder.linkTurnOn');
       break;
     case 'no_permission':
       body = t('reminder.noPermission');
-      showSettingsLink = true;
+      actionLabel = t('reminder.linkSetup');
       break;
     case 'inactive':
       body = t('reminder.inactive');
-      showSettingsLink = true;
+      actionLabel = t('reminder.linkSetup');
       break;
     case 'active':
       body = reminderBody ?? t('reminder.inactive');
       break;
   }
 
-  const linkLabel =
-    status.kind === 'web'
-      ? t('reminder.linkSettings')
-      : status.kind === 'app_off'
-        ? t('reminder.linkTurnOn')
-        : t('reminder.linkSetup');
-
   const statusLabel = expectingNext
     ? t('reminder.a11yScheduled')
     : t('reminder.a11yNotScheduled');
+  const a11yLabel = `${statusLabel}. ${body}. ${actionLabel}`;
 
   return (
-    <View
-      style={[
-        styles.wrap,
-        {
-          backgroundColor: water.surfaceDeep,
-        },
+    <Pressable
+      role="link"
+      accessibilityRole="link"
+      accessibilityLabel={a11yLabel}
+      accessibilityHint={t('home.reminderBarHint')}
+      onPress={() => router.push('/settings')}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: water.surfaceDeep },
+        pressed && styles.pressed,
       ]}>
-      <View style={styles.row}>
-        <View
-          style={[
-            styles.dot,
-            {
-              backgroundColor: expectingNext ? water.caustic : water.mist,
-            },
-          ]}
-          accessible={false}
-          importantForAccessibility="no"
-        />
-        <View style={styles.textBlock}>
-          <View style={styles.textRow}>
-            <ThemedText
-              type="small"
-              style={[styles.bodyText, { color: water.mist }]}
-              accessibilityLabel={`${statusLabel}. ${body}`}>
-              {body}
-            </ThemedText>
-            {showSettingsLink ? (
-              <Link href="/settings" asChild>
-                <Pressable
-                  role="link"
-                  accessibilityRole="link"
-                  accessibilityLabel={linkLabel}
-                  hitSlop={Spacing.two}
-                  style={({ pressed }) => [
-                    styles.linkHit,
-                    pressed && styles.linkPressed,
-                  ]}>
-                  <ThemedText type="small" style={[styles.linkText, { color: water.water }]}>
-                    {linkLabel}
-                  </ThemedText>
-                </Pressable>
-              </Link>
-            ) : null}
-          </View>
-        </View>
-      </View>
-    </View>
+      <View
+        style={[
+          styles.dot,
+          { backgroundColor: expectingNext ? water.caustic : water.mist },
+        ]}
+        accessible={false}
+        importantForAccessibility="no"
+      />
+      <ThemedText type="small" style={[styles.body, { color: water.mist }]}>
+        {body}
+      </ThemedText>
+      <SymbolView
+        name="chevron.right"
+        size={14}
+        weight="semibold"
+        tintColor={water.mist}
+        fallback={
+          <ThemedText type="smallBold" style={{ color: water.mist }}>
+            ›
+          </ThemedText>
+        }
+      />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
+  card: {
     alignSelf: 'stretch',
-    marginTop: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.two,
-  },
-  row: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
+    alignItems: 'center',
     gap: Spacing.two,
+    minHeight: 48,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.three,
   },
   dot: {
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    marginTop: 7,
     opacity: 0.85,
+    flexShrink: 0,
   },
-  textBlock: {
+  body: {
     flex: 1,
-    maxWidth: '100%',
-  },
-  textRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  bodyText: {
-    flexShrink: 1,
+    minWidth: 0,
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '500',
   },
-  linkText: {
-    flexShrink: 0,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '600',
-  },
-  linkHit: {
-    minHeight: LINK_MIN_HEIGHT,
-    justifyContent: 'center',
-  },
-  linkPressed: {
+  pressed: {
     opacity: 0.7,
   },
 });

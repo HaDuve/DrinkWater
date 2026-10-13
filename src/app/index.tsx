@@ -1,14 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AccessibilityInfo, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenLoadingState } from '@/components/screen-loading-state';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth } from '@/constants/theme';
 import { HomeCenterBody } from '@/features/water/components/home-center-body';
-import { HomeSettingsButton } from '@/features/water/components/home-settings-button';
 import { buildHomeCenterLayoutModel } from '@/features/water/domain/home-center-layout';
 import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { buildWeekTeaserSummary } from '@/features/water/domain/week-teaser';
@@ -107,10 +106,6 @@ export default function HomeScreen() {
   return (
     <ThemedView style={[styles.container, { backgroundColor: water.surface }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
-        <View style={styles.topBar}>
-          <View style={styles.topBarSpacer} />
-          <HomeSettingsButton />
-        </View>
         <HomeCenterBody
           state={state}
           layout={layout}
@@ -138,14 +133,5 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: MaxContentWidth,
     alignSelf: 'stretch',
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingHorizontal: Spacing.two,
-  },
-  topBarSpacer: {
-    flex: 1,
   },
 });

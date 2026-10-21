@@ -7,7 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenLoadingState } from '@/components/screen-loading-state';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth } from '@/constants/theme';
+import { formatGlassSuccessCueBody } from '@/features/water/components/glass-success-cue-copy';
 import { HomeCenterBody } from '@/features/water/components/home-center-body';
+import {
+  buildGlassSuccessCue,
+  type GlassSuccessCue,
+} from '@/features/water/domain/glass-success-cue';
 import { buildHomeCenterLayoutModel } from '@/features/water/domain/home-center-layout';
 import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { buildWeekTeaserSummary } from '@/features/water/domain/week-teaser';
@@ -27,6 +32,7 @@ export default function HomeScreen() {
   const [weekHistory, setWeekHistory] = useState<DailyHistoryEntry[] | null>(null);
   const [reminderStatus, setReminderStatus] = useState<WaterReminderUiState | null>(null);
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
+  const [successCue, setSuccessCue] = useState<GlassSuccessCue | null>(null);
 
   const refresh = useCallback(() => {
     void (async () => {
@@ -64,7 +70,9 @@ export default function HomeScreen() {
 
   const runGlassAction = useCallback(
     (action: { type: 'add' } | { type: 'undo'; amount: number }) => {
-      if (busyAction) return;
+      if (busyAction || !state) return;
+      const previousIntakeMl = state.intakeMl;
+      const amountMl = action.type === 'add' ? state.glassMl : action.amount;
       setBusyAction(action.type);
       void (async () => {
         try {
@@ -74,10 +82,14 @@ export default function HomeScreen() {
             await removeGlassAmount(action.amount);
             await syncWaterRemindersFromState();
           }
+          const cue = buildGlassSuccessCue({
+            action: action.type,
+            amountMl,
+            previousIntakeMl,
+          });
+          setSuccessCue(cue);
           refresh();
-          AccessibilityInfo.announceForAccessibility(
-            action.type === 'add' ? t('home.addGlassDone') : t('home.undoGlassDone'),
-          );
+          AccessibilityInfo.announceForAccessibility(formatGlassSuccessCueBody(cue, t));
         } catch {
           AccessibilityInfo.announceForAccessibility(t('home.glassActionFailed'));
         } finally {
@@ -85,7 +97,7 @@ export default function HomeScreen() {
         }
       })();
     },
-    [busyAction, refresh, t],
+    [busyAction, refresh, state, t],
   );
 
   if (!state || !weekHistory) {
@@ -115,6 +127,7 @@ export default function HomeScreen() {
           vesselSublabel={vesselSublabel}
           primaryLabel={primaryLabel}
           busyAction={busyAction}
+          successCue={successCue}
           onAdd={() => runGlassAction({ type: 'add' })}
           onUndo={() => runGlassAction({ type: 'undo', amount: state.glassMl })}
         />

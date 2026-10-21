@@ -33,4 +33,10 @@ describe('formatRecentGlassStatusBody', () => {
       ),
     ).toBe('home.recentGlassTodayOther:{"count":3,"clockTime":"14:32"}');
   });
+
+  it('formats Intake-only today count without a clock time', () => {
+    expect(
+      formatRecentGlassStatusBody({ kind: 'todayCountOnly', glassCount: 3 }, mockT),
+    ).toBe('home.recentGlassTodayCountOther:{"count":3}');
+  });
 });

@@ -16,6 +16,8 @@ export const en = {
     recentGlassJustNow: "Just now · + {{ml}} ml",
     recentGlassTodayOne: "Today · {{count}} glass · last {{clockTime}}",
     recentGlassTodayOther: "Today · {{count}} glasses · last {{clockTime}}",
+    recentGlassTodayCountOne: "Today · {{count}} glass",
+    recentGlassTodayCountOther: "Today · {{count}} glasses",
     undoGlass: "Undo glass",
     undoGlassBusy: "Undoing…",
     undoGlassDone: "Glass undone",

@@ -72,9 +72,14 @@ export default function HomeScreen() {
   useEffect(() => subscribeIntakeChanged(refresh), [refresh]);
 
   const recentGlassStatus: RecentGlassStatus | null = useMemo(() => {
-    if (!glassEvents) return null;
-    return buildRecentGlassStatus({ events: glassEvents, nowMs });
-  }, [glassEvents, nowMs]);
+    if (!glassEvents || !state) return null;
+    return buildRecentGlassStatus({
+      events: glassEvents,
+      nowMs,
+      intakeMl: state.intakeMl,
+      glassMl: state.glassMl,
+    });
+  }, [glassEvents, nowMs, state]);
 
   useEffect(() => {
     if (!glassEvents || !recentGlassStatus) return;

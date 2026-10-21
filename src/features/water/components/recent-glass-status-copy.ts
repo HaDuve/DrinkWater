@@ -10,6 +10,11 @@ export function formatRecentGlassStatusBody(status: RecentGlassStatus, t: TFunct
   if (status.kind === 'justNow') {
     return t('home.recentGlassJustNow', { ml: status.amountMl });
   }
+  if (status.kind === 'todayCountOnly') {
+    const key =
+      status.glassCount === 1 ? 'home.recentGlassTodayCountOne' : 'home.recentGlassTodayCountOther';
+    return t(key, { count: status.glassCount });
+  }
   const key = status.glassCount === 1 ? 'home.recentGlassTodayOne' : 'home.recentGlassTodayOther';
   return t(key, {
     count: status.glassCount,

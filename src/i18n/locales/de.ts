@@ -18,6 +18,8 @@ export const de: TranslationResources = {
     recentGlassJustNow: "Gerade eben · + {{ml}} ml",
     recentGlassTodayOne: "Heute · {{count}} Glas · zuletzt {{clockTime}}",
     recentGlassTodayOther: "Heute · {{count}} Gläser · zuletzt {{clockTime}}",
+    recentGlassTodayCountOne: "Heute · {{count}} Glas",
+    recentGlassTodayCountOther: "Heute · {{count}} Gläser",
     undoGlass: "Glas rückgängig",
     undoGlassBusy: "Wird rückgängig…",
     undoGlassDone: "Glas rückgängig gemacht",

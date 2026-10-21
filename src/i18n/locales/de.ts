@@ -16,6 +16,7 @@ export const de: TranslationResources = {
     addGlassDone: "Glas hinzugefügt",
     recentGlassEmpty: "Heute noch kein Glas",
     recentGlassJustNow: "Gerade eben · + {{ml}} ml",
+    recentGlassJustNowGroup: "Gerade eben · {{count}} × {{ml}} ml",
     recentGlassTodayOne: "Heute · {{count}} Glas · zuletzt {{clockTime}}",
     recentGlassTodayOther: "Heute · {{count}} Gläser · zuletzt {{clockTime}}",
     recentGlassTodayCountOne: "Heute · {{count}} Glas",

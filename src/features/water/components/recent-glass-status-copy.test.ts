@@ -16,6 +16,12 @@ describe('formatRecentGlassStatusBody', () => {
     );
   });
 
+  it('formats just-now burst with identical glass count and size', () => {
+    expect(
+      formatRecentGlassStatusBody({ kind: 'justNow', amountMl: 200, count: 3 }, mockT),
+    ).toBe('home.recentGlassJustNowGroup:{"count":3,"ml":200}');
+  });
+
   it('formats today summary with singular glass count', () => {
     expect(
       formatRecentGlassStatusBody(

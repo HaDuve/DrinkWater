@@ -4,8 +4,10 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { Spacing } from '@/constants/theme';
 import { HomeGlassActions } from '@/features/water/components/home-glass-actions';
+import { HomeGlassSuccessCue } from '@/features/water/components/home-glass-success-cue';
 import { HomeVessel } from '@/features/water/components/home-vessel';
 import { HomeWeekTeaser } from '@/features/water/components/home-week-teaser';
+import type { GlassSuccessCue } from '@/features/water/domain/glass-success-cue';
 import type {
   HomeBusyAction,
   HomeCenterLayoutModel,
@@ -24,6 +26,7 @@ type Props = {
   vesselSublabel: string;
   primaryLabel: string;
   busyAction: HomeBusyAction;
+  successCue: GlassSuccessCue | null;
   onAdd: () => void;
   onUndo: () => void;
 };
@@ -42,6 +45,7 @@ export function HomeCenterBody({
   vesselSublabel,
   primaryLabel,
   busyAction,
+  successCue,
   onAdd,
   onUndo,
 }: Props) {
@@ -68,6 +72,7 @@ export function HomeCenterBody({
           onAdd={onAdd}
           onUndo={onUndo}
         />
+        {successCue ? <HomeGlassSuccessCue cue={successCue} /> : null}
       </View>
 
       <View style={styles.footer}>

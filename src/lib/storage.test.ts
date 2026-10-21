@@ -1,6 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { loadWaterState, saveReminderWindow } from './storage';
+import {
+  addGlassAmount,
+  loadTodayGlassEvents,
+  loadWaterState,
+  removeGlassAmount,
+  saveReminderWindow,
+} from './storage';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -154,3 +160,29 @@ describe('loadWaterState reminder window repair', () => {
     expect(await AsyncStorage.getItem('@water_reminder_window_end')).toBeNull();
   });
 });
+
+describe('today glass events', () => {
+  it('appends on add and pops on remove', async () => {
+    expect(await loadTodayGlassEvents()).toEqual([]);
+
+    await addGlassAmount(250);
+    const afterAdd = await loadTodayGlassEvents();
+    expect(afterAdd).toHaveLength(1);
+    expect(afterAdd[0]?.amountMl).toBe(250);
+    expect(typeof afterAdd[0]?.atMs).toBe('number');
+
+    await removeGlassAmount(250);
+    expect(await loadTodayGlassEvents()).toEqual([]);
+  });
+
+  it('clears events when the calendar day rolls over', async () => {
+    await addGlassAmount(250);
+    expect(await loadTodayGlassEvents()).toHaveLength(1);
+
+    await AsyncStorage.setItem('@water_last_reset_date', '2020-01-01');
+    await loadWaterState();
+
+    expect(await loadTodayGlassEvents()).toEqual([]);
+  });
+});
+

@@ -14,6 +14,7 @@ export const en = {
     addGlassDone: "Glass added",
     recentGlassEmpty: "No glass yet today",
     recentGlassJustNow: "Just now · + {{ml}} ml",
+    recentGlassJustNowGroup: "Just now · {{count}} × {{ml}} ml",
     recentGlassTodayOne: "Today · {{count}} glass · last {{clockTime}}",
     recentGlassTodayOther: "Today · {{count}} glasses · last {{clockTime}}",
     recentGlassTodayCountOne: "Today · {{count}} glass",

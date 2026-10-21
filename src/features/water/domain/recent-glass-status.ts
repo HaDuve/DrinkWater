@@ -7,7 +7,7 @@ export type GlassEvent = {
 
 export type RecentGlassStatus =
   | { kind: 'empty' }
-  | { kind: 'justNow'; amountMl: number }
+  | { kind: 'justNow'; amountMl: number; count?: number }
   | { kind: 'today'; glassCount: number; lastClockTime: string }
   /** Intake present but no (or incomplete) event timestamps — e.g. post-upgrade. */
   | { kind: 'todayCountOnly'; glassCount: number };
@@ -49,7 +49,17 @@ export function buildRecentGlassStatus(input: Input): RecentGlassStatus {
 
   const last = events[events.length - 1]!;
   if (nowMs - last.atMs <= recentWindowMs) {
-    return { kind: 'justNow', amountMl: last.amountMl };
+    const burst = pickRecentGlassBurst(events, recentWindowMs);
+    const lastAmountMl = burst[burst.length - 1]!.amountMl;
+    const allSame = burst.every((event) => event.amountMl === lastAmountMl);
+    if (allSame && burst.length > 1) {
+      return { kind: 'justNow', amountMl: lastAmountMl, count: burst.length };
+    }
+    if (!allSame) {
+      const totalMl = burst.reduce((sum, event) => sum + event.amountMl, 0);
+      return { kind: 'justNow', amountMl: totalMl };
+    }
+    return { kind: 'justNow', amountMl: lastAmountMl };
   }
 
   return {
@@ -57,4 +67,16 @@ export function buildRecentGlassStatus(input: Input): RecentGlassStatus {
     glassCount: Math.max(events.length, estimated),
     lastClockTime: formatClockFromMs(last.atMs),
   };
+}
+
+/** Rolling burst: each Glass joins while within the window of the previous grouped Glass. */
+function pickRecentGlassBurst(events: GlassEvent[], recentWindowMs: number): GlassEvent[] {
+  const burst: GlassEvent[] = [events[events.length - 1]!];
+  for (let i = events.length - 2; i >= 0; i -= 1) {
+    const candidate = events[i]!;
+    const previous = burst[0]!;
+    if (previous.atMs - candidate.atMs > recentWindowMs) break;
+    burst.unshift(candidate);
+  }
+  return burst;
 }

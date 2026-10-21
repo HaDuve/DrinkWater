@@ -8,6 +8,9 @@ export function formatRecentGlassStatusBody(status: RecentGlassStatus, t: TFunct
     return t('home.recentGlassEmpty');
   }
   if (status.kind === 'justNow') {
+    if (status.count != null && status.count > 1) {
+      return t('home.recentGlassJustNowGroup', { count: status.count, ml: status.amountMl });
+    }
     return t('home.recentGlassJustNow', { ml: status.amountMl });
   }
   if (status.kind === 'todayCountOnly') {

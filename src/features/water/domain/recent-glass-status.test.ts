@@ -34,6 +34,79 @@ describe('buildRecentGlassStatus', () => {
     ).toEqual({ kind: 'justNow', amountMl: 250 });
   });
 
+  it('groups identical glasses in a rolling recent burst as justNow with count', () => {
+    expect(
+      buildRecentGlassStatus({
+        events: [
+          { atMs: nowMs - 30_000, amountMl: 200 },
+          { atMs: nowMs - 20_000, amountMl: 200 },
+          { atMs: nowMs - 10_000, amountMl: 200 },
+        ],
+        nowMs,
+        intakeMl: 600,
+        glassMl: 200,
+      }),
+    ).toEqual({ kind: 'justNow', amountMl: 200, count: 3 });
+  });
+
+  it('shows total ml when a recent burst mixes glass amounts', () => {
+    expect(
+      buildRecentGlassStatus({
+        events: [
+          { atMs: nowMs - 20_000, amountMl: 200 },
+          { atMs: nowMs - 10_000, amountMl: 250 },
+        ],
+        nowMs,
+        intakeMl: 450,
+        glassMl: 200,
+      }),
+    ).toEqual({ kind: 'justNow', amountMl: 450 });
+  });
+
+  it('keeps a rolling burst when older glasses are outside now but chained within the window', () => {
+    expect(
+      buildRecentGlassStatus({
+        events: [
+          { atMs: nowMs - 4 * 60_000, amountMl: 200 },
+          { atMs: nowMs - 2.5 * 60_000, amountMl: 200 },
+          { atMs: nowMs - 0.5 * 60_000, amountMl: 200 },
+        ],
+        nowMs,
+        intakeMl: 600,
+        glassMl: 200,
+      }),
+    ).toEqual({ kind: 'justNow', amountMl: 200, count: 3 });
+  });
+
+  it('stops the burst when a glass is outside the window of the previous grouped glass', () => {
+    expect(
+      buildRecentGlassStatus({
+        events: [
+          { atMs: nowMs - 5 * 60_000, amountMl: 200 },
+          { atMs: nowMs - 30_000, amountMl: 200 },
+          { atMs: nowMs - 10_000, amountMl: 200 },
+        ],
+        nowMs,
+        intakeMl: 600,
+        glassMl: 200,
+      }),
+    ).toEqual({ kind: 'justNow', amountMl: 200, count: 2 });
+  });
+
+  it('decrements the justNow group when a glass is undone from the burst', () => {
+    expect(
+      buildRecentGlassStatus({
+        events: [
+          { atMs: nowMs - 20_000, amountMl: 200 },
+          { atMs: nowMs - 10_000, amountMl: 200 },
+        ],
+        nowMs,
+        intakeMl: 400,
+        glassMl: 200,
+      }),
+    ).toEqual({ kind: 'justNow', amountMl: 200, count: 2 });
+  });
+
   it('returns today summary with glass count and last clock time when older than the window', () => {
     const result = buildRecentGlassStatus({
       events: [

@@ -4,20 +4,20 @@ import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import { formatGlassSuccessCueBody } from '@/features/water/components/glass-success-cue-copy';
-import type { GlassSuccessCue } from '@/features/water/domain/glass-success-cue';
+import { formatRecentGlassStatusBody } from '@/features/water/components/recent-glass-status-copy';
+import type { RecentGlassStatus } from '@/features/water/domain/recent-glass-status';
 import { useWaterMaterial } from '@/hooks/use-water-material';
 
 type Props = {
-  cue: GlassSuccessCue;
+  status: RecentGlassStatus;
 };
 
-/** Transient home line confirming a Glass was logged or undone. */
-export function HomeGlassSuccessCue({ cue }: Props) {
+/** Always-on home line: if/when glasses were logged today (senior glance). */
+export function HomeRecentGlassStatus({ status }: Props) {
   const { t } = useTranslation();
   const water = useWaterMaterial();
-  const body = formatGlassSuccessCueBody(cue, t);
-  const emphasize = cue.kind === 'added' && cue.firstOfDay;
+  const body = formatRecentGlassStatusBody(status, t);
+  const emphasize = status.kind === 'justNow';
 
   return (
     <View

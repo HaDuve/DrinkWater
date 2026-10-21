@@ -8,12 +8,20 @@ import {
   type ReminderWindow,
   type TimeOfDay,
 } from '@/features/water/domain/glass-schedule';
+import type { GlassEvent } from '@/features/water/domain/recent-glass-status';
+import {
+  appendGlassEvent,
+  parseTodayGlassEvents,
+  popLastGlassEvent,
+  serializeTodayGlassEvents,
+} from '@/features/water/domain/today-glass-events';
 
 const KEYS = {
   goalMl: '@water_goal_ml',
   glassMl: '@water_glass_ml',
   intakeMl: '@water_intake_ml',
   dailyHistory: '@water_daily_history_v1',
+  glassEventsToday: '@water_glass_events_today_v1',
   reminderWindowStart: '@water_reminder_window_start',
   reminderWindowEnd: '@water_reminder_window_end',
   lastResetDate: '@water_last_reset_date',
@@ -250,6 +258,15 @@ async function readRawWaterState(): Promise<{
   };
 }
 
+async function saveTodayGlassEvents(today: string, events: GlassEvent[]): Promise<void> {
+  await AsyncStorage.setItem(KEYS.glassEventsToday, serializeTodayGlassEvents(today, events));
+}
+
+async function readTodayGlassEvents(today: string): Promise<GlassEvent[]> {
+  const raw = await AsyncStorage.getItem(KEYS.glassEventsToday);
+  return parseTodayGlassEvents(raw, today);
+}
+
 async function rolloverIfNeeded(
   history: Record<string, number>,
   storedDate: string | null,
@@ -264,6 +281,7 @@ async function rolloverIfNeeded(
       [KEYS.intakeMl, '0'],
       [KEYS.dailyHistory, JSON.stringify(pruneHistoryMap(nextHistory))],
       [KEYS.lastResetDate, today],
+      [KEYS.glassEventsToday, serializeTodayGlassEvents(today, [])],
     ]);
     return { intakeMl: 0, history: nextHistory };
   }
@@ -335,14 +353,36 @@ export async function setIntakeMl(ml: number): Promise<void> {
   await upsertHistoryForDate(todayISO(), nextMl);
 }
 
+/** Today’s glass timestamps for the home recent-status line. */
+export async function loadTodayGlassEvents(): Promise<GlassEvent[]> {
+  const today = todayISO();
+  await loadWaterState();
+  return readTodayGlassEvents(today);
+}
+
+async function appendTodayGlassEvent(amountMl: number, atMs: number = Date.now()): Promise<void> {
+  const today = todayISO();
+  const events = await readTodayGlassEvents(today);
+  await saveTodayGlassEvents(today, appendGlassEvent(events, amountMl, atMs));
+}
+
+async function popTodayGlassEvent(): Promise<void> {
+  const today = todayISO();
+  const events = await readTodayGlassEvents(today);
+  await saveTodayGlassEvents(today, popLastGlassEvent(events));
+}
+
 export async function addGlassAmount(amountMl: number): Promise<void> {
   const state = await loadWaterState();
-  await setIntakeMl(state.intakeMl + Math.max(0, amountMl));
+  const amount = Math.max(0, amountMl);
+  await setIntakeMl(state.intakeMl + amount);
+  await appendTodayGlassEvent(amount);
 }
 
 export async function removeGlassAmount(amountMl: number): Promise<void> {
   const state = await loadWaterState();
   await setIntakeMl(Math.max(0, state.intakeMl - Math.max(0, amountMl)));
+  await popTodayGlassEvent();
 }
 
 export async function loadDailyHistory(days: number = 7): Promise<DailyHistoryEntry[]> {

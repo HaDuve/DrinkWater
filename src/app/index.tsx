@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AccessibilityInfo, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,13 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenLoadingState } from '@/components/screen-loading-state';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth } from '@/constants/theme';
-import { formatGlassSuccessCueBody } from '@/features/water/components/glass-success-cue-copy';
 import { HomeCenterBody } from '@/features/water/components/home-center-body';
-import {
-  buildGlassSuccessCue,
-  type GlassSuccessCue,
-} from '@/features/water/domain/glass-success-cue';
+import { formatRecentGlassStatusBody } from '@/features/water/components/recent-glass-status-copy';
 import { buildHomeCenterLayoutModel } from '@/features/water/domain/home-center-layout';
+import {
+  buildRecentGlassStatus,
+  type GlassEvent,
+  type RecentGlassStatus,
+} from '@/features/water/domain/recent-glass-status';
 import { buildTodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import { buildWeekTeaserSummary } from '@/features/water/domain/week-teaser';
 import { subscribeIntakeChanged } from '@/features/water/hooks/intake-changed';
@@ -21,7 +22,7 @@ import { logGlassAndSyncReminders } from '@/features/water/hooks/log-glass-and-s
 import { useWaterMaterial } from '@/hooks/use-water-material';
 import { getWaterReminderUiState, syncWaterRemindersFromState, type WaterReminderUiState } from '@/lib/notifications';
 import type { DailyHistoryEntry, WaterSettings } from '@/lib/storage';
-import { loadDailyHistory, loadWaterState, removeGlassAmount } from '@/lib/storage';
+import { loadDailyHistory, loadTodayGlassEvents, loadWaterState, removeGlassAmount } from '@/lib/storage';
 
 type BusyAction = 'add' | 'undo' | null;
 
@@ -30,13 +31,25 @@ export default function HomeScreen() {
   const water = useWaterMaterial();
   const [state, setState] = useState<WaterSettings | null>(null);
   const [weekHistory, setWeekHistory] = useState<DailyHistoryEntry[] | null>(null);
+  const [glassEvents, setGlassEvents] = useState<GlassEvent[] | null>(null);
   const [reminderStatus, setReminderStatus] = useState<WaterReminderUiState | null>(null);
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
-  const [successCue, setSuccessCue] = useState<GlassSuccessCue | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const announceBaselineReady = useRef(false);
+  const lastAnnouncedAtMs = useRef<number | null>(null);
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   const refresh = useCallback(() => {
     void (async () => {
-      const [s, history] = await Promise.all([loadWaterState(), loadDailyHistory(7)]);
+      const [s, history, events] = await Promise.all([
+        loadWaterState(),
+        loadDailyHistory(7),
+        loadTodayGlassEvents(),
+      ]);
       const reminder = await getWaterReminderUiState(s.remindersEnabled, {
         goalMl: s.goalMl,
         glassMl: s.glassMl,
@@ -45,6 +58,7 @@ export default function HomeScreen() {
       });
       setState(s);
       setWeekHistory(history);
+      setGlassEvents(events);
       setReminderStatus(reminder);
     })();
   }, []);
@@ -56,6 +70,28 @@ export default function HomeScreen() {
   );
 
   useEffect(() => subscribeIntakeChanged(refresh), [refresh]);
+
+  const recentGlassStatus: RecentGlassStatus | null = useMemo(() => {
+    if (!glassEvents) return null;
+    return buildRecentGlassStatus({ events: glassEvents, nowMs });
+  }, [glassEvents, nowMs]);
+
+  useEffect(() => {
+    if (!glassEvents || !recentGlassStatus) return;
+    const lastAtMs = glassEvents[glassEvents.length - 1]?.atMs ?? null;
+    if (!announceBaselineReady.current) {
+      announceBaselineReady.current = true;
+      lastAnnouncedAtMs.current = lastAtMs;
+      // Siri/cold-start: app opens after a just-logged glass — confirm audibly once.
+      if (recentGlassStatus.kind === 'justNow') {
+        AccessibilityInfo.announceForAccessibility(formatRecentGlassStatusBody(recentGlassStatus, t));
+      }
+      return;
+    }
+    if (lastAtMs === lastAnnouncedAtMs.current) return;
+    lastAnnouncedAtMs.current = lastAtMs;
+    AccessibilityInfo.announceForAccessibility(formatRecentGlassStatusBody(recentGlassStatus, t));
+  }, [glassEvents, recentGlassStatus, t]);
 
   const todayPreview = useMemo(() => {
     if (!state) return null;
@@ -71,8 +107,6 @@ export default function HomeScreen() {
   const runGlassAction = useCallback(
     (action: { type: 'add' } | { type: 'undo'; amount: number }) => {
       if (busyAction || !state) return;
-      const previousIntakeMl = state.intakeMl;
-      const amountMl = action.type === 'add' ? state.glassMl : action.amount;
       setBusyAction(action.type);
       void (async () => {
         try {
@@ -82,14 +116,7 @@ export default function HomeScreen() {
             await removeGlassAmount(action.amount);
             await syncWaterRemindersFromState();
           }
-          const cue = buildGlassSuccessCue({
-            action: action.type,
-            amountMl,
-            previousIntakeMl,
-          });
-          setSuccessCue(cue);
           refresh();
-          AccessibilityInfo.announceForAccessibility(formatGlassSuccessCueBody(cue, t));
         } catch {
           AccessibilityInfo.announceForAccessibility(t('home.glassActionFailed'));
         } finally {
@@ -100,7 +127,7 @@ export default function HomeScreen() {
     [busyAction, refresh, state, t],
   );
 
-  if (!state || !weekHistory) {
+  if (!state || !weekHistory || !glassEvents || !recentGlassStatus) {
     return <ScreenLoadingState />;
   }
 
@@ -127,7 +154,7 @@ export default function HomeScreen() {
           vesselSublabel={vesselSublabel}
           primaryLabel={primaryLabel}
           busyAction={busyAction}
-          successCue={successCue}
+          recentGlassStatus={recentGlassStatus}
           onAdd={() => runGlassAction({ type: 'add' })}
           onUndo={() => runGlassAction({ type: 'undo', amount: state.glassMl })}
         />

@@ -4,14 +4,14 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { WaterReminderInfo } from '@/components/water-reminder-info';
 import { Spacing } from '@/constants/theme';
 import { HomeGlassActions } from '@/features/water/components/home-glass-actions';
-import { HomeGlassSuccessCue } from '@/features/water/components/home-glass-success-cue';
+import { HomeRecentGlassStatus } from '@/features/water/components/home-recent-glass-status';
 import { HomeVessel } from '@/features/water/components/home-vessel';
 import { HomeWeekTeaser } from '@/features/water/components/home-week-teaser';
-import type { GlassSuccessCue } from '@/features/water/domain/glass-success-cue';
 import type {
   HomeBusyAction,
   HomeCenterLayoutModel,
 } from '@/features/water/domain/home-center-layout';
+import type { RecentGlassStatus } from '@/features/water/domain/recent-glass-status';
 import type { TodayRemainingPreview } from '@/features/water/domain/today-remaining-preview';
 import type { WeekTeaserSummary } from '@/features/water/domain/week-teaser';
 import type { WaterReminderUiState } from '@/lib/notifications';
@@ -26,7 +26,7 @@ type Props = {
   vesselSublabel: string;
   primaryLabel: string;
   busyAction: HomeBusyAction;
-  successCue: GlassSuccessCue | null;
+  recentGlassStatus: RecentGlassStatus;
   onAdd: () => void;
   onUndo: () => void;
 };
@@ -45,7 +45,7 @@ export function HomeCenterBody({
   vesselSublabel,
   primaryLabel,
   busyAction,
-  successCue,
+  recentGlassStatus,
   onAdd,
   onUndo,
 }: Props) {
@@ -72,7 +72,7 @@ export function HomeCenterBody({
           onAdd={onAdd}
           onUndo={onUndo}
         />
-        {successCue ? <HomeGlassSuccessCue cue={successCue} /> : null}
+        <HomeRecentGlassStatus status={recentGlassStatus} />
       </View>
 
       <View style={styles.footer}>
